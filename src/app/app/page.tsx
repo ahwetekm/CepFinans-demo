@@ -12,7 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, DollarSign, TrendingUp, TrendingDown, Plus, Wallet, PiggyBank, Building, Filter, Repeat, Settings, BarChart3, Target, AlertCircle, ArrowRightLeft, Clock, Timer, Shield, Smartphone, FileText, Download, Upload, Menu, X, ChevronRight, CheckCircle, LineChart as LineChartIcon, Mail, Send, CheckCircle2 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LanguageToggle } from '@/components/language-toggle'
+import { UserAuthButton } from '@/components/auth/UserAuthButton'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useAuth } from '@/contexts/AuthContext'
+import { dataSync } from '@/lib/data-sync'
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts'
 import Link from 'next/link'
 import EditRecurringDialog from '@/components/EditRecurringDialog'
@@ -62,15 +65,16 @@ interface Note {
 
 export default function CepFinansApp() {
   const { t } = useLanguage()
+  const { user } = useAuth()
   const [balances, setBalances] = useState<AccountBalances>({ cash: 0, bank: 0, savings: 0 })
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([])
   const [isFirstTime, setIsFirstTime] = useState(true)
+  const [loading, setLoading] = useState(true)
   const [showAddTransaction, setShowAddTransaction] = useState(false)
   const [showRecurringDialog, setShowRecurringDialog] = useState(false)
   const [showContactDialog, setShowContactDialog] = useState(false)
   const [showTransferDialog, setShowTransferDialog] = useState(false)
-  const [showSettingsDialog, setShowSettingsDialog] = useState(false)
   const [showStatsDialog, setShowStatsDialog] = useState(false)
   const [showEditRecurringDialog, setShowEditRecurringDialog] = useState(false)
   const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null)
@@ -97,52 +101,50 @@ export default function CepFinansApp() {
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
   
 
-  // localStorage'dan verileri yükle
+  // Verileri Supabase'den yükle
   useEffect(() => {
-    const savedBalances = localStorage.getItem('cepfinans-balances')
-    const savedTransactions = localStorage.getItem('cepfinans-transactions')
-    const savedRecurring = localStorage.getItem('cepfinans-recurring')
-    const savedNotes = localStorage.getItem('cepfinans-notes')
-    
-    if (savedBalances) {
-      setBalances(JSON.parse(savedBalances))
-      setIsFirstTime(false)
+    const loadData = async () => {
+      if (!user) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        setLoading(true)
+        
+        // Paralel olarak tüm verileri yükle
+        const [balancesData, transactionsData, recurringData, notesData] = await Promise.all([
+          dataSync.getBalances(),
+          dataSync.getTransactions(),
+          dataSync.getRecurringTransactions(),
+          dataSync.getNotes()
+        ])
+
+        if (balancesData) {
+          setBalances(balancesData)
+          setIsFirstTime(false)
+        }
+        
+        if (transactionsData) {
+          setTransactions(transactionsData)
+        }
+
+        if (recurringData) {
+          setRecurringTransactions(recurringData)
+        }
+
+        if (notesData) {
+          setNotes(notesData)
+        }
+      } catch (error) {
+        console.error('Veriler yüklenirken hata:', error)
+      } finally {
+        setLoading(false)
+      }
     }
-    
-    if (savedTransactions) {
-      setTransactions(JSON.parse(savedTransactions))
-    }
 
-    if (savedRecurring) {
-      setRecurringTransactions(JSON.parse(savedRecurring))
-    }
-
-    if (savedNotes) {
-      setNotes(JSON.parse(savedNotes))
-    }
-  }, [])
-
-  // Balances kaydet
-  useEffect(() => {
-    if (!isFirstTime) {
-      localStorage.setItem('cepfinans-balances', JSON.stringify(balances))
-    }
-  }, [balances, isFirstTime])
-
-  // Transactions kaydet
-  useEffect(() => {
-    localStorage.setItem('cepfinans-transactions', JSON.stringify(transactions))
-  }, [transactions])
-
-  // Recurring transactions kaydet
-  useEffect(() => {
-    localStorage.setItem('cepfinans-recurring', JSON.stringify(recurringTransactions))
-  }, [recurringTransactions])
-
-  // Notes kaydet
-  useEffect(() => {
-    localStorage.setItem('cepfinans-notes', JSON.stringify(notes))
-  }, [notes])
+    loadData()
+  }, [user])
 
   // {t('app.monthlyAutoTransactions')}
   useEffect(() => {
@@ -187,39 +189,106 @@ export default function CepFinansApp() {
     })
   }
 
-  const handleInitialSetup = (newBalances: AccountBalances) => {
+  const handleInitialSetup = async (newBalances: AccountBalances) => {
     setBalances(newBalances)
     setIsFirstTime(false)
+    
+    // Bakiyeleri Supabase'e kaydet (await ekle)
+    try {
+      const balanceUpdated = await dataSync.updateBalances(newBalances)
+      if (!balanceUpdated) {
+        console.error('Bakiyeler kaydedilemedi, state geri alınıyor')
+        setBalances({ cash: 0, bank: 0, savings: 0 })
+        setIsFirstTime(true)
+        alert('Bakiyeler kaydedilemedi. Lütfen tekrar deneyin.')
+      }
+    } catch (error) {
+      console.error('Bakiyeler kaydedilirken hata:', error)
+      setBalances({ cash: 0, bank: 0, savings: 0 })
+      setIsFirstTime(true)
+      alert('Bakiyeler kaydedilemedi. Lütfen tekrar deneyin.')
+    }
   }
 
-  const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
+  const addTransaction = async (transaction: Omit<Transaction, 'id'>) => {
     const newTransaction: Transaction = {
       ...transaction,
       id: Date.now().toString()
     }
     
+    console.log('🔄 addTransaction başlatılıyor:', newTransaction)
+    console.log('📊 Mevcut bakiyeler:', balances)
+    
+    // Önce state'i güncelle
     setTransactions(prev => [newTransaction, ...prev])
+    
+    // Supabase'e kaydet
+    try {
+      console.log('💾 Supabase\'e transaction kaydediliyor...')
+      const transactionAdded = await dataSync.addTransaction(newTransaction)
+      console.log('✅ Transaction Supabase\'e kaydedildi:', transactionAdded)
+      
+      if (!transactionAdded) {
+        console.error('❌ Transaction kaydedilemedi, state geri alınıyor')
+        setTransactions(prev => prev.filter(t => t.id !== newTransaction.id))
+        alert('İşlem kaydedilemedi. Lütfen tekrar deneyin.')
+        return
+      }
+    } catch (error) {
+      console.error('❌ Transaction kaydedilirken hata:', error)
+      // Hata durumunda state'i geri al
+      setTransactions(prev => prev.filter(t => t.id !== newTransaction.id))
+      alert('İşlem kaydedilemedi. Lütfen tekrar deneyin.')
+      return
+    }
+    
+    // Bakiyeleri güncelleme kısmı
+    console.log('💰 Bakiyeler güncelleniyor...')
     
     // Transfer işlemi ise bakiyeleri farklı güncelle
     if (transaction.type === 'transfer' && transaction.transferFrom && transaction.transferTo) {
-      setBalances(prev => {
-        const updated = { ...prev }
-        updated[transaction.transferFrom!] -= transaction.amount
-        updated[transaction.transferTo!] += transaction.amount
-        return updated
-      })
+      console.log('📤 Transfer işlemi tespit edildi')
+      const newBalances = { ...balances }
+      newBalances[transaction.transferFrom!] -= transaction.amount
+      newBalances[transaction.transferTo!] += transaction.amount
+      console.log('💰 Transfer sonrası bakiyeler:', newBalances)
+      setBalances(newBalances)
+      
+      // Bakiyeleri Supabase'e kaydet (await ekle)
+      console.log('💾 Transfer bakiyeleri Supabase\'e kaydediliyor...')
+      const balanceUpdated = await dataSync.updateBalances(newBalances)
+      console.log('✅ Transfer bakiyeleri Supabase\'e güncellendi:', balanceUpdated)
+      if (!balanceUpdated) {
+        console.error('❌ Bakiyeler güncellenemedi, state geri alınıyor')
+        setBalances(balances) // Orijinal bakiyeleri geri al
+        alert('Bakiyeler güncellenemedi. Lütfen tekrar deneyin.')
+      }
     } else {
+      console.log('📤 Normal gelir/gider işlemi tespit edildi')
       // Normal gelir/gider işlemi
-      setBalances(prev => {
-        const updated = { ...prev }
-        if (transaction.type === 'income') {
-          updated[transaction.account] += transaction.amount
-        } else if (transaction.type === 'expense') {
-          updated[transaction.account] -= transaction.amount
-        }
-        return updated
-      })
+      const newBalances = { ...balances }
+      if (transaction.type === 'income') {
+        newBalances[transaction.account] += transaction.amount
+        console.log(`💰 Gelir eklendi: +${transaction.amount} -> ${transaction.account}`)
+      } else if (transaction.type === 'expense') {
+        newBalances[transaction.account] -= transaction.amount
+        console.log(`💰 Gider eklendi: -${transaction.amount} -> ${transaction.account}`)
+      }
+      console.log('💰 İşlem sonrası bakiyeler:', newBalances)
+      setBalances(newBalances)
+      
+      // Bakiyeleri Supabase'e kaydet (await ekle)
+      console.log('💾 Normal bakiyeleri Supabase\'e kaydediliyor...')
+      const balanceUpdated = await dataSync.updateBalances(newBalances)
+      console.log('✅ Normal bakiyeler Supabase\'e güncellendi:', balanceUpdated)
+      if (!balanceUpdated) {
+        console.error('❌ Bakiyeler güncellenemedi, state geri alınıyor')
+        setBalances(balances) // Orijinal bakiyeleri geri al
+        alert('Bakiyeler güncellenemedi. Lütfen tekrar deneyin.')
+      }
     }
+    
+    console.log('✅ addTransaction tamamlandı')
   }
 
   const addTransfer = (transfer: { from: 'cash' | 'bank' | 'savings', to: 'cash' | 'bank' | 'savings', amount: number, description: string }) => {
@@ -271,12 +340,29 @@ export default function CepFinansApp() {
       .sort((a, b) => a.daysUntil - b.daysUntil)
   }
 
-  const addRecurringTransaction = (recurring: Omit<RecurringTransaction, 'id'>) => {
+  const addRecurringTransaction = async (recurring: Omit<RecurringTransaction, 'id'>) => {
     const newRecurring: RecurringTransaction = {
       ...recurring,
       id: Date.now().toString()
     }
+    
+    // Önce state'i güncelle
     setRecurringTransactions(prev => [...prev, newRecurring])
+    
+    // Supabase'e kaydet (await ekle)
+    try {
+      const recurringUpdated = await dataSync.addRecurringTransaction(newRecurring)
+      if (!recurringUpdated) {
+        console.error('Recurring transaction kaydedilemedi, state geri alınıyor')
+        setRecurringTransactions(prev => prev.filter(r => r.id !== newRecurring.id))
+        alert('Tekrarlayan işlem kaydedilemedi. Lütfen tekrar deneyin.')
+      }
+    } catch (error) {
+      console.error('Recurring transaction kaydedilirken hata:', error)
+      // Hata durumunda state'i geri al
+      setRecurringTransactions(prev => prev.filter(r => r.id !== newRecurring.id))
+      alert('Tekrarlayan işlem kaydedilemedi. Lütfen tekrar deneyin.')
+    }
   }
 
   const handleEditRecurring = (recurring: RecurringTransaction) => {
@@ -284,68 +370,30 @@ export default function CepFinansApp() {
     setShowEditRecurringDialog(true)
   }
 
-  const updateRecurringTransaction = (updatedRecurring: RecurringTransaction) => {
+  const updateRecurringTransaction = async (updatedRecurring: RecurringTransaction) => {
+    // Önce state'i güncelle
     setRecurringTransactions(prev => 
       prev.map(r => 
         r.id === updatedRecurring.id ? updatedRecurring : r
       )
     )
-    setShowEditRecurringDialog(false)
-    setEditingRecurring(null)
-  }
-
-  const backupData = () => {
-    const data = {
-      balances,
-      transactions,
-      recurringTransactions,
-      exportDate: new Date().toISOString()
-    }
     
-    const dataStr = JSON.stringify(data, null, 2)
-    const dataBlob = new Blob([dataStr], { type: 'application/json' })
-    const url = URL.createObjectURL(dataBlob)
-    
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `cepfinans-backup-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
-
-  const restoreData = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target?.result as string)
-        
-        if (data.balances) {
-          setBalances(data.balances)
-          localStorage.setItem('cepfinans-balances', JSON.stringify(data.balances))
-        }
-        
-        if (data.transactions) {
-          setTransactions(data.transactions)
-          localStorage.setItem('cepfinans-transactions', JSON.stringify(data.transactions))
-        }
-        
-        if (data.recurringTransactions) {
-          setRecurringTransactions(data.recurringTransactions)
-          localStorage.setItem('cepfinans-recurring', JSON.stringify(data.recurringTransactions))
-        }
-        
-        setIsFirstTime(false)
-        alert('Veriler başarıyla geri yüklendi!')
-      } catch (error) {
-        alert('Yedek dosyası okunamadı. Lütfen dosyanın doğru olduğundan emin olun.')
+    // Supabase'e güncelle (await ekle)
+    try {
+      const recurringUpdated = await dataSync.updateRecurringTransaction(updatedRecurring)
+      if (!recurringUpdated) {
+        console.error('Recurring transaction güncellenemedi, state geri alınıyor')
+        // Orijinal veriyi geri almak zorundayız ama bu karmaşık
+        alert('Tekrarlayan işlem güncellenemedi. Lütfen tekrar deneyin.')
+        return
       }
+      
+      setShowEditRecurringDialog(false)
+      setEditingRecurring(null)
+    } catch (error) {
+      console.error('Recurring transaction güncellenirken hata:', error)
+      alert('Tekrarlayan işlem güncellenemedi. Lütfen tekrar deneyin.')
     }
-    reader.readAsText(file)
   }
 
   const totalBalance = balances.cash + balances.bank + balances.savings
@@ -418,7 +466,7 @@ export default function CepFinansApp() {
   }
 
   // Not fonksiyonları
-  const addNote = () => {
+  const addNote = async () => {
     if (!noteContent.trim()) {
       alert('Lütfen bir not içeriği girin!')
       return
@@ -432,15 +480,48 @@ export default function CepFinansApp() {
       tags: noteTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
     }
 
+    // Önce state'i güncelle
     setNotes(prev => [newNote, ...prev])
-    setNoteContent('')
-    setNoteTags('')
-    setShowNoteDialog(false)
+    
+    // Supabase'e kaydet (await ekle)
+    try {
+      const noteAdded = await dataSync.addNote(newNote)
+      if (!noteAdded) {
+        console.error('Not kaydedilemedi, state geri alınıyor')
+        setNotes(prev => prev.filter(note => note.id !== newNote.id))
+        alert('Not kaydedilemedi. Lütfen tekrar deneyin.')
+        return
+      }
+      
+      setNoteContent('')
+      setNoteTags('')
+      setShowNoteDialog(false)
+    } catch (error) {
+      console.error('Not kaydedilirken hata:', error)
+      // Hata durumunda state'i geri al
+      setNotes(prev => prev.filter(note => note.id !== newNote.id))
+      alert('Not kaydedilemedi. Lütfen tekrar deneyin.')
+    }
   }
 
-  const deleteNote = (noteId: string) => {
+  const deleteNote = async (noteId: string) => {
     if (confirm('Bu notu silmek istediğinizden emin misiniz?')) {
-      setNotes(prev => prev.filter(note => note.id !== noteId))
+      // Supabase'den sil (await ekle)
+      try {
+        const noteDeleted = await dataSync.deleteNote(noteId)
+        if (!noteDeleted) {
+          console.error('Not silinemedi')
+          alert('Not silinemedi. Lütfen tekrar deneyin.')
+          return
+        }
+        
+        // State'i güncelle (backend'den silindiği için)
+        setNotes(prev => prev.filter(note => note.id !== noteId))
+        console.log('Note successfully deleted from Supabase and state updated')
+      } catch (error) {
+        console.error('Not silinirken hata:', error)
+        alert('Not silinemedi. Lütfen tekrar deneyin.')
+      }
     }
   }
 
@@ -504,6 +585,45 @@ export default function CepFinansApp() {
     return monthlyData
   }
 
+  // Kullanıcı giriş yapmamışsa yükleme göster
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">Yükleniyor...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Kullanıcı giriş yapmamışsa giriş sayfasına yönlendir
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Giriş Gerekli
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Bu sayfaya erişmek için giriş yapmanız gerekmektedir.
+          </p>
+          <Button 
+            onClick={() => window.location.href = '/'}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3"
+          >
+            Ana Sayfaya Dön
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   if (isFirstTime) {
     return <InitialSetup onComplete={handleInitialSetup} />
   }
@@ -531,59 +651,9 @@ export default function CepFinansApp() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="icon" className="bg-white dark:bg-gray-800 border">
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-white dark:bg-gray-800">
-                <DialogHeader>
-                  <DialogTitle>{t('app.settings')}</DialogTitle>
-                  <DialogDescription>
-                    {t('app.manageData')}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium">{t('app.dataBackup')}</Label>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                      Tüm verilerinizi JSON formatında yedekleyin
-                    </p>
-                    <Button onClick={backupData} className="w-full bg-green-600 hover:bg-green-700">
-                      <Download className="h-4 w-4 mr-2" />
-                      Yedekle
-                    </Button>
-                  </div>
-                  
-                  <div>
-                    <Label className="text-sm font-medium">Veri Geri Yükleme</Label>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                      Önceden aldığınız yedeği geri yükleyin
-                    </p>
-                    <div className="relative">
-                      <Input
-                        type="file"
-                        accept=".json"
-                        onChange={restoreData}
-                        className="sr-only"
-                        id="restore-file"
-                      />
-                      <Button asChild className="w-full">
-                        <label htmlFor="restore-file" className="cursor-pointer flex items-center">
-                          <Upload className="h-4 w-4 mr-2" />
-                          Geri Yükle
-                        </label>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <div className="flex items-center gap-2">
+            <UserAuthButton />
             <LanguageToggle />
             <ThemeToggle />
-          </div>
           </div>
         </header>
 

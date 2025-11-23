@@ -37,16 +37,30 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalP
 
   if (!isOpen) return null
 
+  const validateEmail = (email: string) => {
+    // Test için her e-postayı kabul et - Supabase tarafında kontrol edilecek
+    console.log('Validating email:', email)
+    return email.length > 3 && email.includes('@')
+  }
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     setSignInError('')
     
-    const { error } = await signIn(signInEmail, signInPassword)
+    const trimmedEmail = signInEmail.trim().toLowerCase()
+    
+    if (!validateEmail(trimmedEmail)) {
+      setSignInError(t('auth.invalidEmail') || 'Geçerli bir e-posta adresi girin')
+      return
+    }
+    
+    const { error } = await signIn(trimmedEmail, signInPassword)
     if (error) {
       setSignInError(error.message)
     } else {
+      // Başarılı giriş - modalı kapat (yönlendirme AuthContext'te yapılacak)
       onClose()
-      // Reset form
+      // Formu temizle
       setSignInEmail('')
       setSignInPassword('')
     }
@@ -57,7 +71,19 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalP
     setSignUpError('')
     setSignUpSuccess(false)
     
-    const { error } = await signUp(signUpEmail, signUpPassword, signUpFullName)
+    const trimmedEmail = signUpEmail.trim().toLowerCase()
+    
+    if (!validateEmail(trimmedEmail)) {
+      setSignUpError(t('auth.invalidEmail') || 'Geçerli bir e-posta adresi girin')
+      return
+    }
+    
+    if (signUpPassword.length < 6) {
+      setSignUpError(t('auth.passwordTooShort') || 'Şifre en az 6 karakter olmalıdır')
+      return
+    }
+    
+    const { error } = await signUp(trimmedEmail, signUpPassword, signUpFullName.trim())
     if (error) {
       setSignUpError(error.message)
     } else {
@@ -95,7 +121,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalP
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                     <Input
                       id="signin-email"
-                      type="email"
+                      type="text"
                       placeholder={t('auth.emailPlaceholder') || 'ornek@email.com'}
                       value={signInEmail}
                       onChange={(e) => setSignInEmail(e.target.value)}
@@ -112,7 +138,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalP
                     <Input
                       id="signin-password"
                       type={showSignInPassword ? 'text' : 'password'}
-                      placeholder={t('auth.passwordPlaceholder') || '••••••••'}
+                      placeholder={t('auth.passwordPlaceholder') || '•••••••'}
                       value={signInPassword}
                       onChange={(e) => setSignInPassword(e.target.value)}
                       className="pl-10 pr-10"
@@ -170,7 +196,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalP
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                     <Input
                       id="signup-email"
-                      type="email"
+                      type="text"
                       placeholder={t('auth.emailPlaceholder') || 'ornek@email.com'}
                       value={signUpEmail}
                       onChange={(e) => setSignUpEmail(e.target.value)}
@@ -187,7 +213,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalP
                     <Input
                       id="signup-password"
                       type={showSignUpPassword ? 'text' : 'password'}
-                      placeholder={t('auth.passwordPlaceholder') || '••••••••'}
+                      placeholder={t('auth.passwordPlaceholder') || '•••••••'}
                       value={signUpPassword}
                       onChange={(e) => setSignUpPassword(e.target.value)}
                       className="pl-10 pr-10"

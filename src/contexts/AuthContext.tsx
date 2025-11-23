@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
 
 interface AuthContextType {
   user: User | null
@@ -24,10 +25,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
+      if (!supabase) {
+        console.error('Supabase client not initialized')
+        setLoading(false)
+        return
+      }
+      
       const { data: { session }, error } = await supabase.auth.getSession()
       if (error) {
         console.error('Error getting session:', error)
@@ -41,25 +49,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
     getSession()
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session)
-        setSession(session)
-        setUser(session?.user ?? null)
-        setLoading(false)
+    if (supabase) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          console.log('Auth state changed:', event, session)
+          setSession(session)
+          setUser(session?.user ?? null)
+          setLoading(false)
 
-        // Create or update user profile
-        if (session?.user) {
-          await createOrUpdateProfile(session.user)
+          // Create or update user profile and redirect to app
+          if (session?.user) {
+            await createOrUpdateProfile(session.user)
+            // Giriş başarılı olursa app sayfasına yönlendir
+            router.push('/app')
+          }
         }
-      }
-    )
+      )
 
-    return () => subscription.unsubscribe()
+      return () => subscription.unsubscribe()
+    }
   }, [])
 
   const createOrUpdateProfile = async (user: User) => {
     try {
+      if (!supabase) {
+        console.error('Supabase client not initialized')
+        return
+      }
+      
       const { error } = await supabase
         .from('profiles')
         .upsert({
@@ -80,8 +97,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
+      if (!supabase) {
+        return { error: { message: 'Supabase client not initialized' } as AuthError }
+      }
+      
+      console.log('Attempting to sign up with email:', email)
+      console.log('Password length:', password.length)
+      console.log('Full name:', fullName)
+      
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim().toLowerCase(),
         password,
         options: {
           data: {
@@ -90,27 +115,43 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       })
 
+      console.log('Supabase response:', { data, error })
       return { error }
     } catch (error) {
+      console.error('Signup error:', error)
       return { error: error as AuthError }
     }
   }
 
   const signIn = async (email: string, password: string) => {
     try {
+      if (!supabase) {
+        return { error: { message: 'Supabase client not initialized' } as AuthError }
+      }
+      
+      console.log('Attempting to sign in with email:', email)
+      console.log('Password length:', password.length)
+      
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password
       })
 
+      console.log('Supabase sign in response:', { data, error })
       return { error }
     } catch (error) {
+      console.error('Signin error:', error)
       return { error: error as AuthError }
     }
   }
 
   const signOut = async () => {
     try {
+      if (!supabase) {
+        console.error('Supabase client not initialized')
+        return
+      }
+      
       await supabase.auth.signOut()
     } catch (error) {
       console.error('Error signing out:', error)
@@ -119,9 +160,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const resetPassword = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email)
+      if (!supabase) {
+        return { error: { message: 'Supabase client not initialized' } as AuthError }
+      }
+      
+      console.log('Attempting to reset password for email:', email)
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase())
+      console.log('Password reset response:', { error })
       return { error }
     } catch (error) {
+      console.error('Password reset error:', error)
       return { error: error as AuthError }
     }
   }

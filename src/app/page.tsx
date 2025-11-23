@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LanguageToggle } from '@/components/language-toggle'
 import { UserAuthButton } from '@/components/auth/UserAuthButton'
+import { AuthModal } from '@/components/auth/AuthModal'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function HomePage() {
@@ -15,6 +16,7 @@ export default function HomePage() {
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null)
   const [showGuide, setShowGuide] = useState(false)
   const [showContactDialog, setShowContactDialog] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
   
   // İletişim form state
   const [formData, setFormData] = useState({
@@ -123,7 +125,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-white dark:bg-gray-950">
       {/* Tema ve Dil Değiştirme Butonları */}
       <div className="fixed top-6 right-6 z-50 flex items-center gap-2">
-        <UserAuthButton />
+        <UserAuthButton onAuthClick={() => setShowAuthModal(true)} />
         <LanguageToggle />
         <ThemeToggle />
       </div>
@@ -151,12 +153,14 @@ export default function HomePage() {
 
             {/* Başla Butonları */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-              <Link href="/app">
-                <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white px-12 py-4 text-xl font-medium shadow-lg">
-                  {t('home.start')}
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </Link>
+              <Button 
+                size="lg" 
+                className="bg-green-600 hover:bg-green-700 text-white px-12 py-4 text-xl font-medium shadow-lg"
+                onClick={() => setShowAuthModal(true)}
+              >
+                {t('home.start')}
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
               
               <a 
                 href="https://github.com/ahwetekm/CepFinans" 
@@ -625,6 +629,13 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+        defaultTab="signup"
+      />
     </div>
   )
 }

@@ -1,335 +1,405 @@
 import { supabase } from './supabase'
 
-export interface SyncData {
-  accounts?: any
-  transactions?: any[]
-  recurring_transactions?: any[]
-  notes?: any[]
-  settings?: any
-}
-
-export class DataSyncService {
-  private static instance: DataSyncService
-  private userId: string | null = null
-  private syncInProgress = false
-
-  static getInstance(): DataSyncService {
-    if (!DataSyncService.instance) {
-      DataSyncService.instance = new DataSyncService()
-    }
-    return DataSyncService.instance
-  }
-
-  setUserId(userId: string) {
-    this.userId = userId
-  }
-
-  // Verileri Supabase'e yükle
-  async uploadToSupabase(dataType: keyof SyncData, data: any): Promise<boolean> {
-    if (!this.userId) {
-      console.error('User ID not set')
-      return false
-    }
-
+// Basit veri senkronizasyon fonksiyonları
+export const dataSync = {
+  // Mevcut kullanıcı ID'sini al
+  async getCurrentUserId() {
     try {
-      const { error } = await supabase
-        .from('user_data')
-        .upsert({
-          user_id: this.userId,
-          data_type: dataType,
-          data: data,
-          updated_at: new Date().toISOString()
-        })
-
-      if (error) {
-        console.error('Error uploading to Supabase:', error)
-        return false
+      const { data: { user }, error } = await supabase.auth.getUser()
+      if (error || !user) {
+        console.error('Error getting current user:', error)
+        return null
       }
-
-      console.log(`Successfully uploaded ${dataType} to Supabase`)
-      return true
+      return user.id
     } catch (error) {
-      console.error('Error in uploadToSupabase:', error)
-      return false
-    }
-  }
-
-  // Verileri Supabase'den indir
-  async downloadFromSupabase(dataType: keyof SyncData): Promise<any | null> {
-    if (!this.userId) {
-      console.error('User ID not set')
+      console.error('Error in getCurrentUserId:', error)
       return null
     }
+  },
 
+  // Bakiyeleri getir
+  async getBalances() {
     try {
+      const userId = await this.getCurrentUserId()
+      if (!userId) return { cash: 0, bank: 0, savings: 0 }
+
       const { data, error } = await supabase
         .from('user_data')
         .select('data')
-        .eq('user_id', this.userId)
-        .eq('data_type', dataType)
+        .eq('user_id', userId)
+        .eq('data_type', 'balances')
         .single()
 
       if (error) {
         if (error.code === 'PGRST116') {
-          // No data found
-          return null
+          console.log('No balances found for user, returning defaults')
+          return { cash: 0, bank: 0, savings: 0 }
         }
-        console.error('Error downloading from Supabase:', error)
-        return null
+        console.error('Error getting balances:', error)
+        return { cash: 0, bank: 0, savings: 0 }
       }
 
-      return data?.data || null
+      console.log('Balances retrieved from Supabase:', data?.data)
+      return data?.data || { cash: 0, bank: 0, savings: 0 }
     } catch (error) {
-      console.error('Error in downloadFromSupabase:', error)
-      return null
+      console.error('Error in getBalances:', error)
+      return { cash: 0, bank: 0, savings: 0 }
     }
-  }
+  },
 
-  // Tüm verileri indir
-  async downloadAllData(): Promise<SyncData | null> {
-    if (!this.userId) {
-      console.error('User ID not set')
-      return null
-    }
-
+  // Bakiyeleri güncelle
+  async updateBalances(balances: any) {
     try {
+      const userId = await this.getCurrentUserId()
+      if (!userId) {
+        console.error('No user ID found for updating balances')
+        return false
+      }
+
+      console.log('Updating balances in Supabase:', balances)
+
+      const { error } = await supabase
+        .from('user_data')
+        .upsert({
+          user_id: userId,
+          data_type: 'balances',
+          data: balances,
+          updated_at: new Date().toISOString()
+        })
+
+      if (error) {
+        console.error('Error updating balances:', error)
+        return false
+      }
+
+      console.log('Balances successfully updated in Supabase')
+      return true
+    } catch (error) {
+      console.error('Error in updateBalances:', error)
+      return false
+    }
+  },
+
+  // İşlemleri getir
+  async getTransactions() {
+    try {
+      const userId = await this.getCurrentUserId()
+      if (!userId) return []
+
       const { data, error } = await supabase
         .from('user_data')
-        .select('data_type, data')
-        .eq('user_id', this.userId)
+        .select('data')
+        .eq('user_id', userId)
+        .eq('data_type', 'transactions')
+        .single()
 
       if (error) {
-        console.error('Error downloading all data:', error)
-        return null
+        if (error.code === 'PGRST116') {
+          console.log('No transactions found for user')
+          return []
+        }
+        console.error('Error getting transactions:', error)
+        return []
       }
 
-      const result: SyncData = {}
-      data?.forEach(item => {
-        result[item.data_type as keyof SyncData] = item.data
-      })
-
-      return result
+      console.log('Transactions retrieved from Supabase:', data?.data?.length || 0)
+      return data?.data || []
     } catch (error) {
-      console.error('Error in downloadAllData:', error)
-      return null
+      console.error('Error in getTransactions:', error)
+      return []
     }
-  }
+  },
 
-  // Tüm verileri yükle
-  async uploadAllData(data: SyncData): Promise<boolean> {
-    if (!this.userId) {
-      console.error('User ID not set')
-      return false
-    }
-
-    if (this.syncInProgress) {
-      console.log('Sync already in progress')
-      return false
-    }
-
-    this.syncInProgress = true
-
+  // İşlem ekle
+  async addTransaction(transaction: any) {
     try {
-      const uploadPromises = Object.entries(data).map(([dataType, value]) =>
-        this.uploadToSupabase(dataType as keyof SyncData, value)
+      const userId = await this.getCurrentUserId()
+      if (!userId) {
+        console.error('No user ID found for adding transaction')
+        return false
+      }
+
+      console.log('Adding transaction to Supabase:', transaction)
+
+      // Mevcut işlemleri getir
+      const existingTransactions = await this.getTransactions()
+      
+      // Aynı ID'ye sahip işlem var mı kontrol et
+      const duplicateTransaction = existingTransactions.find(t => 
+        t.id === transaction.id || 
+        (t.type === transaction.type && 
+         t.amount === transaction.amount && 
+         t.category === transaction.category && 
+         t.account === transaction.account && 
+         t.date === transaction.date)
       )
 
-      const results = await Promise.all(uploadPromises)
-      const allSuccessful = results.every(result => result)
-
-      if (allSuccessful) {
-        console.log('All data uploaded successfully')
-      } else {
-        console.error('Some data uploads failed')
-      }
-
-      return allSuccessful
-    } catch (error) {
-      console.error('Error in uploadAllData:', error)
-      return false
-    } finally {
-      this.syncInProgress = false
-    }
-  }
-
-  // Local storage'dan verileri al
-  getLocalData(): SyncData {
-    const data: SyncData = {}
-
-    try {
-      // Accounts
-      const accounts = localStorage.getItem('cepfinans-accounts')
-      if (accounts) {
-        data.accounts = JSON.parse(accounts)
-      }
-
-      // Transactions
-      const transactions = localStorage.getItem('cepfinans-transactions')
-      if (transactions) {
-        data.transactions = JSON.parse(transactions)
-      }
-
-      // Recurring transactions
-      const recurring = localStorage.getItem('cepfinans-recurring')
-      if (recurring) {
-        data.recurring_transactions = JSON.parse(recurring)
-      }
-
-      // Notes
-      const notes = localStorage.getItem('cepfinans-notes')
-      if (notes) {
-        data.notes = JSON.parse(notes)
-      }
-
-      // Settings
-      const settings = localStorage.getItem('cepfinans-settings')
-      if (settings) {
-        data.settings = JSON.parse(settings)
-      }
-    } catch (error) {
-      console.error('Error getting local data:', error)
-    }
-
-    return data
-  }
-
-  // Local storage'a verileri kaydet
-  saveLocalData(data: SyncData): void {
-    try {
-      Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          localStorage.setItem(`cepfinans-${key}`, JSON.stringify(value))
-        }
-      })
-    } catch (error) {
-      console.error('Error saving local data:', error)
-    }
-  }
-
-  // İki yönlü senkronizasyon
-  async syncData(): Promise<boolean> {
-    if (!this.userId) {
-      console.error('User ID not set')
-      return false
-    }
-
-    if (this.syncInProgress) {
-      console.log('Sync already in progress')
-      return false
-    }
-
-    this.syncInProgress = true
-
-    try {
-      console.log('Starting data synchronization...')
-
-      // Local verileri al
-      const localData = this.getLocalData()
-
-      // Supabase verilerini al
-      const supabaseData = await this.downloadAllData()
-
-      if (!supabaseData) {
-        // Supabase'de veri yok, local verileri yükle
-        console.log('No data in Supabase, uploading local data')
-        return await this.uploadAllData(localData)
-      }
-
-      // Verileri birleştir (basit bir strateji: en güncel veriyi koru)
-      const mergedData: SyncData = {}
-
-      Object.keys(localData).forEach(key => {
-        const dataType = key as keyof SyncData
-        const localValue = localData[dataType]
-        const supabaseValue = supabaseData[dataType]
-
-        if (!supabaseValue) {
-          // Supabase'de bu veri tipi yoksa local veriyi kullan
-          mergedData[dataType] = localValue
-        } else if (!localValue) {
-          // Local'de bu veri tipi yoksa Supabase verisini kullan
-          mergedData[dataType] = supabaseValue
-        } else {
-          // İkisinde de varsa, local veriyi kullan (son değişiklik)
-          mergedData[dataType] = localValue
-        }
-      })
-
-      // Birleştirilmiş verileri hem Supabase'e yükle hem de local'e kaydet
-      await this.uploadAllData(mergedData)
-      this.saveLocalData(mergedData)
-
-      console.log('Data synchronization completed successfully')
-      return true
-    } catch (error) {
-      console.error('Error during sync:', error)
-      return false
-    } finally {
-      this.syncInProgress = false
-    }
-  }
-
-  // Verileri sil
-  async deleteData(dataType: keyof SyncData): Promise<boolean> {
-    if (!this.userId) {
-      console.error('User ID not set')
-      return false
-    }
-
-    try {
-      const { error } = await supabase
-        .from('user_data')
-        .delete()
-        .eq('user_id', this.userId)
-        .eq('data_type', dataType)
-
-      if (error) {
-        console.error('Error deleting data:', error)
+      if (duplicateTransaction) {
+        console.error('Duplicate transaction found, not adding:', transaction)
         return false
       }
 
-      // Local storage'dan da sil
-      localStorage.removeItem(`cepfinans-${dataType}`)
+      const updatedTransactions = [transaction, ...existingTransactions]
 
-      console.log(`Successfully deleted ${dataType}`)
-      return true
-    } catch (error) {
-      console.error('Error in deleteData:', error)
-      return false
-    }
-  }
-
-  // Tüm verileri sil
-  async deleteAllData(): Promise<boolean> {
-    if (!this.userId) {
-      console.error('User ID not set')
-      return false
-    }
-
-    try {
       const { error } = await supabase
         .from('user_data')
-        .delete()
-        .eq('user_id', this.userId)
+        .upsert({
+          user_id: userId,
+          data_type: 'transactions',
+          data: updatedTransactions,
+          updated_at: new Date().toISOString()
+        })
 
       if (error) {
-        console.error('Error deleting all data:', error)
+        console.error('Error adding transaction:', error)
         return false
       }
 
-      // Local storage'dan da temizle
-      const keys = ['accounts', 'transactions', 'recurring_transactions', 'notes', 'settings']
-      keys.forEach(key => {
-        localStorage.removeItem(`cepfinans-${key}`)
-      })
-
-      console.log('Successfully deleted all data')
+      console.log('Transaction successfully added to Supabase')
       return true
     } catch (error) {
-      console.error('Error in deleteAllData:', error)
+      console.error('Error in addTransaction:', error)
+      return false
+    }
+  },
+
+  // Tekrarlayan işlemleri getir
+  async getRecurringTransactions() {
+    try {
+      const userId = await this.getCurrentUserId()
+      if (!userId) return []
+
+      const { data, error } = await supabase
+        .from('user_data')
+        .select('data')
+        .eq('user_id', userId)
+        .eq('data_type', 'recurring_transactions')
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log('No recurring transactions found for user')
+          return []
+        }
+        console.error('Error getting recurring transactions:', error)
+        return []
+      }
+
+      console.log('Recurring transactions retrieved from Supabase:', data?.data?.length || 0)
+      return data?.data || []
+    } catch (error) {
+      console.error('Error in getRecurringTransactions:', error)
+      return []
+    }
+  },
+
+  // Tekrarlayan işlem ekle
+  async addRecurringTransaction(recurring: any) {
+    try {
+      const userId = await this.getCurrentUserId()
+      if (!userId) {
+        console.error('No user ID found for adding recurring transaction')
+        return false
+      }
+
+      console.log('Adding recurring transaction to Supabase:', recurring)
+
+      // Mevcut işlemleri getir
+      const existingRecurring = await this.getRecurringTransactions()
+      
+      // Aynı ID'ye sahip işlem var mı kontrol et
+      const duplicateRecurring = existingRecurring.find(r => 
+        r.id === recurring.id || 
+        (r.type === recurring.type && 
+         r.amount === recurring.amount && 
+         r.category === recurring.category && 
+         r.account === recurring.account && 
+         r.frequency === recurring.frequency && 
+         r.dayOfMonth === recurring.dayOfMonth && 
+         r.startDate === recurring.startDate)
+      )
+
+      if (duplicateRecurring) {
+        console.error('Duplicate recurring transaction found, not adding:', recurring)
+        return false
+      }
+
+      const updatedRecurring = [recurring, ...existingRecurring]
+
+      const { error } = await supabase
+        .from('user_data')
+        .upsert({
+          user_id: userId,
+          data_type: 'recurring_transactions',
+          data: updatedRecurring,
+          updated_at: new Date().toISOString()
+        })
+
+      if (error) {
+        console.error('Error adding recurring transaction:', error)
+        return false
+      }
+
+      console.log('Recurring transaction successfully added to Supabase')
+      return true
+    } catch (error) {
+      console.error('Error in addRecurringTransaction:', error)
+      return false
+    }
+  },
+
+  // Tekrarlayan işlem güncelle
+  async updateRecurringTransaction(updatedRecurring: any) {
+    try {
+      const userId = await this.getCurrentUserId()
+      if (!userId) {
+        console.error('No user ID found for updating recurring transaction')
+        return false
+      }
+
+      console.log('Updating recurring transaction in Supabase:', updatedRecurring)
+
+      // Mevcut işlemleri getir ve güncelle
+      const existingRecurring = await this.getRecurringTransactions()
+      const updatedRecurring = existingRecurring.map(r => 
+        r.id === updatedRecurring.id ? updatedRecurring : r
+      )
+
+      const { error } = await supabase
+        .from('user_data')
+        .upsert({
+          user_id: userId,
+          data_type: 'recurring_transactions',
+          data: updatedRecurring,
+          updated_at: new Date().toISOString()
+        })
+
+      if (error) {
+        console.error('Error updating recurring transaction:', error)
+        return false
+      }
+
+      console.log('Recurring transaction successfully updated in Supabase')
+      return true
+    } catch (error) {
+      console.error('Error in updateRecurringTransaction:', error)
+      return false
+    }
+  },
+
+  // Notları getir
+  async getNotes() {
+    try {
+      const userId = await this.getCurrentUserId()
+      if (!userId) return []
+
+      const { data, error } = await supabase
+        .from('user_data')
+        .select('data')
+        .eq('user_id', userId)
+        .eq('data_type', 'notes')
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log('No notes found for user')
+          return []
+        }
+        console.error('Error getting notes:', error)
+        return []
+      }
+
+      console.log('Notes retrieved from Supabase:', data?.data?.length || 0)
+      return data?.data || []
+    } catch (error) {
+      console.error('Error in getNotes:', error)
+      return []
+    }
+  },
+
+  // Not ekle
+  async addNote(note: any) {
+    try {
+      const userId = await this.getCurrentUserId()
+      if (!userId) {
+        console.error('No user ID found for adding note')
+        return false
+      }
+
+      console.log('Adding note to Supabase:', note)
+
+      // Mevcut notları getir
+      const existingNotes = await this.getNotes()
+      
+      // Aynı ID'ye sahip not var mı kontrol et
+      const duplicateNote = existingNotes.find(n => 
+        n.id === note.id || 
+        (n.content === note.content && n.createdAt === note.createdAt)
+      )
+
+      if (duplicateNote) {
+        console.error('Duplicate note found, not adding:', note)
+        return false
+      }
+
+      const updatedNotes = [note, ...existingNotes]
+
+      const { error } = await supabase
+        .from('user_data')
+        .upsert({
+          user_id: userId,
+          data_type: 'notes',
+          data: updatedNotes,
+          updated_at: new Date().toISOString()
+        })
+
+      if (error) {
+        console.error('Error adding note:', error)
+        return false
+      }
+
+      console.log('Note successfully added to Supabase')
+      return true
+    } catch (error) {
+      console.error('Error in addNote:', error)
+      return false
+    }
+  },
+
+  // Not sil
+  async deleteNote(noteId: string) {
+    try {
+      const userId = await this.getCurrentUserId()
+      if (!userId) {
+        console.error('No user ID found for deleting note')
+        return false
+      }
+
+      console.log('Deleting note from Supabase:', noteId)
+
+      // Mevcut notları getir ve sil
+      const existingNotes = await this.getNotes()
+      const updatedNotes = existingNotes.filter(note => note.id !== noteId)
+
+      const { error } = await supabase
+        .from('user_data')
+        .upsert({
+          user_id: userId,
+          data_type: 'notes',
+          data: updatedNotes,
+          updated_at: new Date().toISOString()
+        })
+
+      if (error) {
+        console.error('Error deleting note:', error)
+        return false
+      }
+
+      console.log('Note successfully deleted from Supabase')
+      return true
+    } catch (error) {
+      console.error('Error in deleteNote:', error)
       return false
     }
   }
 }
-
-export const dataSyncService = DataSyncService.getInstance()

@@ -82,18 +82,20 @@ CREATE INDEX IF NOT EXISTS idx_user_data_type ON public.user_data(data_type);
 CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);
 
 -- 7. Storage for avatars (opsiyonel)
-INSERT INTO public.storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'avatars',
-  'avatars',
-  true,
-  1024 * 1024, -- 1MB
-  ARRAY['image/png', 'image/jpeg', 'image/gif', 'image/webp']
-) ON CONFLICT (id) DO NOTHING;
+-- Storage bucket'ları manuel olarak oluşturmanız gerekebilir
+-- Supabase Dashboard > Storage > Policies bölümünden aşağıdaki politikaları ekleyin:
 
--- Storage policies for avatars
+-- Bucket oluşturma (manuel olarak yapın):
+-- 1. Supabase Dashboard > Storage
+-- 2. "New bucket" tıklayın
+-- 3. Name: "avatars"
+-- 4. Public: true
+-- 5. File size limit: 1048576 (1MB)
+-- 6. Allowed MIME types: image/png, image/jpeg, image/gif, image/webp
+
+-- Storage policies for avatars (bucket oluşturduktan sonra çalıştırın):
 CREATE POLICY "Users can upload own avatar"
-  ON public.storage.objects FOR INSERT
+  ON storage.objects FOR INSERT
   WITH CHECK (
     bucket_id = 'avatars' AND
     auth.role() = 'authenticated' AND
@@ -101,7 +103,7 @@ CREATE POLICY "Users can upload own avatar"
   );
 
 CREATE POLICY "Users can view own avatar"
-  ON public.storage.objects FOR SELECT
+  ON storage.objects FOR SELECT
   USING (
     bucket_id = 'avatars' AND
     auth.role() = 'authenticated' AND
@@ -109,7 +111,7 @@ CREATE POLICY "Users can view own avatar"
   );
 
 CREATE POLICY "Users can update own avatar"
-  ON public.storage.objects FOR UPDATE
+  ON storage.objects FOR UPDATE
   USING (
     bucket_id = 'avatars' AND
     auth.role() = 'authenticated' AND
@@ -117,7 +119,7 @@ CREATE POLICY "Users can update own avatar"
   );
 
 CREATE POLICY "Users can delete own avatar"
-  ON public.storage.objects FOR DELETE
+  ON storage.objects FOR DELETE
   USING (
     bucket_id = 'avatars' AND
     auth.role() = 'authenticated' AND
