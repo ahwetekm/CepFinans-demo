@@ -1467,70 +1467,117 @@ export default function CepFinansApp() {
 function InitialSetup({ onComplete }: { onComplete: (balances: AccountBalances) => void }) {
   const { t } = useLanguage()
   const [balances, setBalances] = useState<AccountBalances>({ cash: 0, bank: 0, savings: 0 })
+  const [isLoading, setIsLoading] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onComplete(balances)
+    setIsLoading(true)
+    
+    try {
+      await onComplete(balances)
+      setShowSuccess(true)
+      
+      // 2 saniye sonra başarı ekranını gizle ve yönlendir
+      setTimeout(() => {
+        setShowSuccess(false)
+        setIsLoading(false)
+      }, 2000)
+    } catch (error) {
+      console.error('Setup error:', error)
+      setIsLoading(false)
+      alert('Bakiyeler kaydedilemedi. Lütfen tekrar deneyin.')
+    }
   }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white dark:bg-gray-800 shadow-sm border">
-        <CardHeader className="text-center">
-          <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <DollarSign className="h-8 w-8 text-white" />
-          </div>
-          <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t('app.initialSetup')}
-          </CardTitle>
-          <CardDescription className="text-gray-600 dark:text-gray-400">
-            {t('app.initialSetupDesc')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="cash" className="text-sm font-medium">Nakit Bakiye</Label>
-              <Input
-                id="cash"
-                type="number"
-                step="0.01"
-                value={balances.cash}
-                onChange={(e) => setBalances(prev => ({ ...prev, cash: parseFloat(e.target.value) || 0 }))}
-                placeholder="0.00"
-                className="mt-1"
-              />
+      {showSuccess ? (
+        <Card className="w-full max-w-md bg-white dark:bg-gray-800 shadow-sm border">
+          <CardContent className="p-8 text-center">
+            <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
-            <div>
-              <Label htmlFor="bank" className="text-sm font-medium">Banka Bakiye</Label>
-              <Input
-                id="bank"
-                type="number"
-                step="0.01"
-                value={balances.bank}
-                onChange={(e) => setBalances(prev => ({ ...prev, bank: parseFloat(e.target.value) || 0 }))}
-                placeholder="0.00"
-                className="mt-1"
-              />
+            <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              Başarılı!
+            </CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-400">
+              Hesap bakiyeleriniz başarıyla kaydedildi. Yönlendiriliyorsunuz...
+            </CardDescription>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="w-full max-w-md bg-white dark:bg-gray-800 shadow-sm border">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <DollarSign className="h-8 w-8 text-white" />
             </div>
-            <div>
-              <Label htmlFor="savings" className="text-sm font-medium">Birikim Bakiye</Label>
-              <Input
-                id="savings"
-                type="number"
-                step="0.01"
-                value={balances.savings}
-                onChange={(e) => setBalances(prev => ({ ...prev, savings: parseFloat(e.target.value) || 0 }))}
-                placeholder="0.00"
-                className="mt-1"
-              />
-            </div>
-            <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">
-              Başla
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+            <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+              {t('app.initialSetup')}
+            </CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-400">
+              {t('app.initialSetupDesc')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="cash" className="text-sm font-medium">Nakit Bakiye</Label>
+                <Input
+                  id="cash"
+                  type="number"
+                  step="0.01"
+                  value={balances.cash}
+                  onChange={(e) => setBalances(prev => ({ ...prev, cash: parseFloat(e.target.value) || 0 }))}
+                  placeholder="0.00"
+                  className="mt-1"
+                  disabled={isLoading}
+                />
+              </div>
+              <div>
+                <Label htmlFor="bank" className="text-sm font-medium">Banka Bakiye</Label>
+                <Input
+                  id="bank"
+                  type="number"
+                  step="0.01"
+                  value={balances.bank}
+                  onChange={(e) => setBalances(prev => ({ ...prev, bank: parseFloat(e.target.value) || 0 }))}
+                  placeholder="0.00"
+                  className="mt-1"
+                  disabled={isLoading}
+                />
+              </div>
+              <div>
+                <Label htmlFor="savings" className="text-sm font-medium">Birikim Bakiye</Label>
+                <Input
+                  id="savings"
+                  type="number"
+                  step="0.01"
+                  value={balances.savings}
+                  onChange={(e) => setBalances(prev => ({ ...prev, savings: parseFloat(e.target.value) || 0 }))}
+                  placeholder="0.00"
+                  className="mt-1"
+                  disabled={isLoading}
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Kaydediliyor...
+                  </div>
+                ) : (
+                  'Başla'
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
