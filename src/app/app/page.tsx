@@ -1,27 +1,6 @@
-/**
- * CepFinans - Kişisel Muhasebe Uygulaması
- * 
- * Bu dosya CepFinans uygulamasının ana sayfasıdır.
- * 
- * Özellikler:
- * - Hesap yönetimi (nakit, banka, birikim)
- * - İşlem takibi (gelir, gider, transfer)
- * - Tekrarlayan işlemler (günlük, haftalık, aylık, yıllık, özel)
- * - Grafikler ve raporlar
- * - Not defteri
- * - Veri senkronizasyonu (Supabase)
- * - Responsive tasarım
- * - Dark/Light tema desteği
- * - Türkçe dil desteği
- * 
- * @author CepFinans Team
- * @version 1.0.0
- * @since 2024
- */
-
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -87,37 +66,30 @@ interface Note {
 export default function CepFinansApp() {
   const { t } = useLanguage()
   const { user } = useAuth()
-  
-  // State yönetimi - performans için useCallback kullan
   const [balances, setBalances] = useState<AccountBalances>({ cash: 0, bank: 0, savings: 0 })
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([])
   const [isFirstTime, setIsFirstTime] = useState(true)
   const [loading, setLoading] = useState(true)
-  
-  // Modal state'leri - tek bir state'de toplamak
-  const [modals, setModals] = useState({
-    addTransaction: false,
-    recurringDialog: false,
-    contactDialog: false,
-    transferDialog: false,
-    statsDialog: false,
-    editRecurringDialog: false,
-    notesSection: false,
-    noteDialog: false,
-    allNotesDialog: false
-  })
-  
+  const [showAddTransaction, setShowAddTransaction] = useState(false)
+  const [showRecurringDialog, setShowRecurringDialog] = useState(false)
+  const [showContactDialog, setShowContactDialog] = useState(false)
+  const [showTransferDialog, setShowTransferDialog] = useState(false)
+  const [showStatsDialog, setShowStatsDialog] = useState(false)
+  const [showEditRecurringDialog, setShowEditRecurringDialog] = useState(false)
   const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null)
   const [selectedDate, setSelectedDate] = useState<string>('all')
+  const [showNotesSection, setShowNotesSection] = useState(false)
+  const [showNoteDialog, setShowNoteDialog] = useState(false)
+  const [showAllNotesDialog, setShowAllNotesDialog] = useState(false)
   const [noteFilter, setNoteFilter] = useState<'all' | 'today' | 'week' | 'month'>('all')
   
-  // Notlar state'i
+  // Notlar state
   const [notes, setNotes] = useState<Note[]>([])
   const [noteContent, setNoteContent] = useState('')
   const [noteTags, setNoteTags] = useState('')
   
-  // İletişim form state'i
+  // İletişim form state
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -129,16 +101,7 @@ export default function CepFinansApp() {
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
   
 
-  // Modal açma/kapma fonksiyonları - performans için
-  const openModal = (modalName: keyof typeof modals) => {
-    setModals(prev => ({ ...prev, [modalName]: true }))
-  }
-
-  const closeModal = (modalName: keyof typeof modals) => {
-    setModals(prev => ({ ...prev, [modalName]: false }))
-  }
-
-  // Verileri Supabase'den yükle - optimize edilmiş
+  // Verileri Supabase'den yükle
   useEffect(() => {
     const loadData = async () => {
       if (!user) {
@@ -155,14 +118,21 @@ export default function CepFinansApp() {
         const recurringData = await dataSync.getRecurringTransactions()
         const notesData = await dataSync.getNotes()
 
-        // State'leri aynı anda güncelle
-        setBalances(balancesData || { cash: 0, bank: 0, savings: 0 })
-        setTransactions(transactionsData || [])
-        setRecurringTransactions(recurringData || [])
-        setNotes(notesData || [])
-        
         if (balancesData) {
+          setBalances(balancesData)
           setIsFirstTime(false)
+        }
+        
+        if (transactionsData) {
+          setTransactions(transactionsData)
+        }
+
+        if (recurringData) {
+          setRecurringTransactions(recurringData)
+        }
+
+        if (notesData) {
+          setNotes(notesData)
         }
       } catch (error) {
         console.error('Veriler yüklenirken hata:', error)
@@ -174,59 +144,59 @@ export default function CepFinansApp() {
     loadData()
   }, [user])
 
-  // Tekrarlayan işlemleri kontrol et - optimize edilmiş
+  // {t('app.monthlyAutoTransactions')}
   useEffect(() => {
-    const checkAndApplyRecurringTransactions = () => {
-      const today = new Date()
-      const currentMonth = today.getMonth()
-      const currentYear = today.getFullYear()
-      const currentDay = today.getDate()
-      const currentWeekDay = today.getDay() // 0 = Pazar, 1 = Pazartesi
-      const todayStr = today.toISOString().split('T')[0]
+    checkAndApplyRecurringTransactions()
+  }, [recurringTransactions])
 
-      // Sadece aktif işlemleri kontrol et
-      const activeRecurring = recurringTransactions.filter(r => r.isActive)
-      
-      // Batch processing için optimize
-      const transactionsToAdd = activeRecurring.filter(recurring => {
-        let shouldApply = false
+  const checkAndApplyRecurringTransactions = () => {
+    const today = new Date()
+    const currentMonth = today.getMonth()
+    const currentYear = today.getFullYear()
+    const currentDay = today.getDate()
+    const currentWeekDay = today.getDay() // 0 = Pazar, 1 = Pazartesi
+    const todayStr = today.toISOString().split('T')[0]
 
-        switch (recurring.frequency) {
-          case 'daily':
-            shouldApply = true
-            break
-          case 'weekly':
-            if (recurring.dayOfWeek) {
-              const jsDayOfWeek = recurring.dayOfWeek === 7 ? 0 : recurring.dayOfWeek
-              shouldApply = currentWeekDay === jsDayOfWeek
-            }
-            break
-          case 'monthly':
-            shouldApply = true
-            break
-          case 'yearly':
-            shouldApply = true
-            break
-          case 'custom':
-            shouldApply = true
-            break
-        }
+    recurringTransactions.forEach(recurring => {
+      if (!recurring.isActive) return
 
-        // Daha önce eklenmiş mi kontrol et
-        if (shouldApply) {
-          const alreadyApplied = transactions.some(t => 
-            t.recurringId === recurring.id && 
-            t.date.startsWith(todayStr)
-          )
-          return !alreadyApplied
-        }
-        
-        return false
-      })
+      let shouldApply = false
 
-      // Batch olarak işlemleri ekle
-      if (transactionsToAdd.length > 0) {
-        transactionsToAdd.forEach(recurring => {
+      switch (recurring.frequency) {
+        case 'daily':
+          shouldApply = true // Her gün uygula
+          break
+        case 'weekly':
+          // Haftalık için seçilen gün kontrol et
+          if (recurring.dayOfWeek) {
+            // JavaScript'te: 0=Pazar, 1=Pazartesi
+            // Bizim sistemimizde: 1=Pazartesi, 7=Pazar
+            const jsDayOfWeek = recurring.dayOfWeek === 7 ? 0 : recurring.dayOfWeek
+            shouldApply = currentWeekDay === jsDayOfWeek
+          }
+          break
+        case 'monthly':
+          // Aylık için her ayın aynı günü
+          shouldApply = true // Basitleştirilmiş - her gün kontrol et
+          break
+        case 'yearly':
+          // Yıllık için her yılın aynı günü
+          shouldApply = true // Basitleştirilmiş - her gün kontrol et
+          break
+        case 'custom':
+          // Özel periyot için mantık daha karmaşık olabilir
+          // Şimdilik her gün kontrol et
+          shouldApply = true
+          break
+      }
+
+      if (shouldApply) {
+        const alreadyApplied = transactions.some(t => 
+          t.recurringId === recurring.id && 
+          t.date.startsWith(todayStr)
+        )
+
+        if (!alreadyApplied) {
           addTransaction({
             type: recurring.type,
             amount: recurring.amount,
@@ -237,35 +207,29 @@ export default function CepFinansApp() {
             isRecurring: true,
             recurringId: recurring.id
           })
-        })
+        }
       }
-    }
+    })
+  }
 
-    // Debounce ile optimize et
-    const timeoutId = setTimeout(checkAndApplyRecurringTransactions, 1000)
-    return () => clearTimeout(timeoutId)
-  }, [recurringTransactions, transactions])
-
-  // Hesap ayarlarını yap - optimize edilmiş
   const handleInitialSetup = async (newBalances: AccountBalances) => {
-    // Önce state'i güncelle (UX için)
     setBalances(newBalances)
     setIsFirstTime(false)
     
-    // Arka planda veritabanına kaydet
+    // Bakiyeleri Supabase'e kaydet (await ekle)
     try {
       const balanceUpdated = await dataSync.updateBalances(newBalances)
       if (!balanceUpdated) {
         console.error('Bakiyeler kaydedilemedi, state geri alınıyor')
-        // Hata durumunda state'i geri al ama kullanıcıyı bilgilendirme
         setBalances({ cash: 0, bank: 0, savings: 0 })
         setIsFirstTime(true)
+        alert('Bakiyeler kaydedilemedi. Lütfen tekrar deneyin.')
       }
     } catch (error) {
       console.error('Bakiyeler kaydedilirken hata:', error)
-      // Hata durumunda state'i geri al
       setBalances({ cash: 0, bank: 0, savings: 0 })
       setIsFirstTime(true)
+      alert('Bakiyeler kaydedilemedi. Lütfen tekrar deneyin.')
     }
   }
 
@@ -2388,7 +2352,4 @@ function DailyReports({ transactions }: { transactions: Transaction[] }) {
       </CardContent>
     </Card>
   )
-}
-
-export default CepFinansApp
 }
