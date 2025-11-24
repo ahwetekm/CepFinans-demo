@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Calendar, DollarSign, TrendingUp, TrendingDown, Plus, Wallet, PiggyBank, Building, Filter, Repeat, Settings, BarChart3, Target, AlertCircle, ArrowRightLeft, Clock, Timer, Shield, Smartphone, FileText, Download, Upload, Menu, X, ChevronRight, CheckCircle, LineChart as LineChartIcon, Mail, Send, CheckCircle2 } from 'lucide-react'
+import { Calendar, DollarSign, TrendingUp, TrendingDown, Plus, Wallet, PiggyBank, Building, Filter, Repeat, Settings, BarChart3, Target, AlertCircle, ArrowRightLeft, Clock, Timer, Shield, Smartphone, FileText, Download, Upload, Menu, X, ChevronRight, CheckCircle, LineChart as LineChartIcon, Mail, Send, CheckCircle2, Home, ArrowLeft } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LanguageToggle } from '@/components/language-toggle'
 import { UserAuthButton } from '@/components/auth/UserAuthButton'
@@ -671,7 +671,7 @@ export default function CepFinansApp() {
       <div className="max-w-7xl mx-auto p-4 md:p-6 pb-32">
         {/* Header */}
         <header className="mb-8">
-          <div className="flex justify-between items-start mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div className="flex items-center gap-4">
               <Link href="/" className="hover:opacity-80 transition-opacity duration-200">
                 <img 
@@ -682,25 +682,31 @@ export default function CepFinansApp() {
               </Link>
               <div>
                 <Link href="/" className="hover:opacity-80 transition-opacity duration-200">
-                  <h1 className="text-5xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
+                  <h1 className="text-3xl sm:text-5xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
                     {t('app.title')}
                   </h1>
                 </Link>
-                <p className="text-gray-600 dark:text-gray-400 text-lg">{t('app.modernPersonalFinance')}</p>
+                <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg">{t('app.modernPersonalFinance')}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <UserAuthButton />
-              <LanguageToggle />
-              <ThemeToggle />
-            </div>
           </div>
+          
+          <div className="flex items-center gap-2">
+            <UserAuthButton />
+            <LanguageToggle />
+            <ThemeToggle />
+          </div>
+        </header>
           
           {/* Navigasyon Menüsü */}
           <nav className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
             <Link 
               href="/app" 
-              className="px-4 py-2 rounded-md text-sm font-medium transition-colors hover:bg-white dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                typeof window !== 'undefined' && window.location.pathname === '/app' 
+                  ? 'bg-white dark:bg-gray-700 text-green-600 dark:text-green-400 shadow-sm' 
+                  : 'hover:bg-white dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
             >
               <div className="flex items-center gap-2">
                 <Wallet className="h-4 w-4" />
@@ -709,7 +715,11 @@ export default function CepFinansApp() {
             </Link>
             <Link 
               href="/app/investments" 
-              className="px-4 py-2 rounded-md text-sm font-medium transition-colors bg-white dark:bg-gray-700 text-green-600 dark:text-green-400 shadow-sm"
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                typeof window !== 'undefined' && window.location.pathname === '/app/investments' 
+                  ? 'bg-white dark:bg-gray-700 text-green-600 dark:text-green-400 shadow-sm' 
+                  : 'hover:bg-white dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
             >
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
@@ -718,7 +728,11 @@ export default function CepFinansApp() {
             </Link>
             <Link 
               href="/app/settings" 
-              className="px-4 py-2 rounded-md text-sm font-medium transition-colors hover:bg-white dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                typeof window !== 'undefined' && window.location.pathname === '/app/settings' 
+                  ? 'bg-white dark:bg-gray-700 text-green-600 dark:text-green-400 shadow-sm' 
+                  : 'hover:bg-white dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
             >
               <div className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
@@ -726,7 +740,6 @@ export default function CepFinansApp() {
               </div>
             </Link>
           </nav>
-        </header>
 
         {/* İstatistik Kartları */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
