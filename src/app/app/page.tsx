@@ -112,13 +112,11 @@ export default function CepFinansApp() {
       try {
         setLoading(true)
         
-        // Paralel olarak tüm verileri yükle
-        const [balancesData, transactionsData, recurringData, notesData] = await Promise.all([
-          dataSync.getBalances(),
-          dataSync.getTransactions(),
-          dataSync.getRecurringTransactions(),
-          dataSync.getNotes()
-        ])
+        // Sequential olarak verileri yükle (daha stabil)
+        const balancesData = await dataSync.getBalances()
+        const transactionsData = await dataSync.getTransactions()
+        const recurringData = await dataSync.getRecurringTransactions()
+        const notesData = await dataSync.getNotes()
 
         if (balancesData) {
           setBalances(balancesData)

@@ -60,8 +60,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
           // Create or update user profile and redirect to app
           if (session?.user) {
-            await createOrUpdateProfile(session.user)
-            // Giriş başarılı olursa app sayfasına yönlendir
+            // Profile oluşturma işlemini beklemeden yönlendir
+            createOrUpdateProfile(session.user)
+            // Giriş başarılı olursa hemen app sayfasına yönlendir
             router.push('/app')
           }
         }
@@ -106,6 +107,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('Password length:', password.length)
       console.log('Full name:', fullName)
       
+      // Loading state'ini başlat
+      setLoading(true)
+      
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
@@ -117,9 +121,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       })
 
       console.log('Supabase response:', { data, error })
+      
+      // Loading state'ini bitir
+      setLoading(false)
+      
       return { error }
     } catch (error) {
       console.error('Signup error:', error)
+      setLoading(false)
       return { error: error as AuthError }
     }
   }
@@ -133,15 +142,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('Attempting to sign in with email:', email)
       console.log('Password length:', password.length)
       
+      // Loading state'ini başlat
+      setLoading(true)
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password
       })
 
       console.log('Supabase sign in response:', { data, error })
+      
+      // Loading state'ini bitir (AuthContext'teki onAuthStateChange yönlendirmeyi yapacak)
+      setLoading(false)
+      
       return { error }
     } catch (error) {
       console.error('Signin error:', error)
+      setLoading(false)
       return { error: error as AuthError }
     }
   }
