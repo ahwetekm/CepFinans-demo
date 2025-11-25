@@ -13,20 +13,85 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
+// Admin kullanıcıları için model
+model Admin {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  username  String     @unique
+  password  String
   name      String?
+  role      Role       @default(ADMIN)
+  isActive  Boolean    @default(true)
+  lastLogin DateTime?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  logs      AdminLog[]
+}
+
+// Sistem ayarları için model
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  category    String   @default("general")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Admin log kayıtları için model
+model AdminLog {
+  id        String     @id @default(cuid())
+  adminId   String
+  action    String     // CREATE, UPDATE, DELETE, LOGIN, LOGOUT
+  target    String?    // hangi tablo/nesne üzerinde işlem yapıldı
+  targetId  String?    // hedef nesnenin ID'si
+  details   String?    // JSON formatında ek bilgiler
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime   @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}
+
+// Kullanıcı finansal verileri için model
+model UserFinanceData {
+  id          String   @id @default(cuid())
+  userId      String   @unique // kullanıcının unique ID'si
+  balances    String   // JSON formatında nakit, banka, birikim bakiyeleri
+  transactions String   // JSON formatında işlemler
+  recurring   String   // JSON formatında tekrarlayan işlemler
+  lastBackup  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Kullanıcı aktivite logları için model
+model UserActivityLog {
+  id        String   @id @default(cuid())
+  userId    String   // kullanıcının unique ID'si
+  action    String   // LOGIN, LOGOUT, TRANSACTION, BACKUP, RESTORE
+  details   String?  // JSON formatında ek bilgiler
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+}
+
+// Email doğrulama token'ları için model
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String   // Supabase user ID
+  email     String
+  token     String   @unique // doğrulama token'ı
+  expiresAt DateTime // token geçerlilik süresi
+  usedAt    DateTime? // kullanıldığı zaman
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// Admin rolleri için enum
+enum Role {
+  ADMIN
+  SUPER_ADMIN
 }
