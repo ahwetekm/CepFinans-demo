@@ -9,7 +9,6 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { LanguageToggle } from '@/components/language-toggle'
 import { UserAuthButton } from '@/components/auth/UserAuthButton'
 import { AuthModal } from '@/components/auth/AuthModal'
-import CurrencyRatesWidget from '@/components/CurrencyRatesWidget'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function HomePage() {
@@ -383,15 +382,14 @@ export default function HomePage() {
 
       {/* Güven İndikatörleri */}
       <section className="py-20 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            {/* Güven Göstergeleri */}
+        <div className="max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
             {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mb-4">
+              <div key={index} className="space-y-4">
+                <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center">
                   <stat.icon className="w-8 h-8 text-green-600" />
                 </div>
-                <div className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">
+                <div className="text-3xl font-bold text-gray-900 dark:text-white">
                   {stat.value}
                 </div>
               </div>

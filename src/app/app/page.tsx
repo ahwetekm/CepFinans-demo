@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Calendar, DollarSign, TrendingUp, TrendingDown, Plus, Wallet, PiggyBank, Building, Filter, Repeat, Settings, BarChart3, Target, AlertCircle, ArrowRightLeft, Clock, Timer, Shield, Smartphone, FileText, Download, Upload, Menu, X, ChevronRight, CheckCircle, LineChart as LineChartIcon, Mail, Send, CheckCircle2, Home, ArrowLeft } from 'lucide-react'
+import { Calendar, DollarSign, TrendingUp, TrendingDown, Plus, Wallet, PiggyBank, Building, Filter, Repeat, Settings, BarChart3, Target, AlertCircle, ArrowRightLeft, Clock, Timer, Shield, Smartphone, FileText, Download, Upload, Menu, X, ChevronRight, CheckCircle, LineChart as LineChartIcon, Mail, Send, CheckCircle2 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LanguageToggle } from '@/components/language-toggle'
 import { UserAuthButton } from '@/components/auth/UserAuthButton'
@@ -434,7 +434,7 @@ export default function CepFinansApp() {
     }
   }
 
-  const totalBalance = (balances.cash || 0) + (balances.bank || 0) + (balances.savings || 0)
+  const totalBalance = balances.cash + balances.bank + balances.savings
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0)
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
   
@@ -670,76 +670,30 @@ export default function CepFinansApp() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="max-w-7xl mx-auto p-4 md:p-6 pb-32">
         {/* Header */}
-        <header className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <div className="flex items-center gap-4">
+        <header className="mb-8 flex justify-between items-start">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="hover:opacity-80 transition-opacity duration-200">
+              <img 
+                src="/favicon.png" 
+                alt={t('app.title')} 
+                className="w-12 h-12 rounded-xl shadow-sm"
+              />
+            </Link>
+            <div>
               <Link href="/" className="hover:opacity-80 transition-opacity duration-200">
-                <img 
-                  src="/favicon.png" 
-                  alt={t('app.title')} 
-                  className="w-12 h-12 rounded-xl shadow-sm"
-                />
+                <h1 className="text-5xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
+                  {t('app.title')}
+                </h1>
               </Link>
-              <div>
-                <Link href="/" className="hover:opacity-80 transition-opacity duration-200">
-                  <h1 className="text-3xl sm:text-5xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
-                    {t('app.title')}
-                  </h1>
-                </Link>
-                <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg">{t('app.modernPersonalFinance')}</p>
-              </div>
+              <p className="text-gray-600 dark:text-gray-400 text-lg">{t('app.modernPersonalFinance')}</p>
             </div>
           </div>
-          
           <div className="flex items-center gap-2">
             <UserAuthButton />
             <LanguageToggle />
             <ThemeToggle />
           </div>
         </header>
-          
-          {/* Navigasyon Menüsü */}
-          <nav className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
-            <Link 
-              href="/app" 
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                typeof window !== 'undefined' && window.location.pathname === '/app' 
-                  ? 'bg-white dark:bg-gray-700 text-green-600 dark:text-green-400 shadow-sm' 
-                  : 'hover:bg-white dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Wallet className="h-4 w-4" />
-                Finans
-              </div>
-            </Link>
-            <Link 
-              href="/app/investments" 
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                typeof window !== 'undefined' && window.location.pathname === '/app/investments' 
-                  ? 'bg-white dark:bg-gray-700 text-green-600 dark:text-green-400 shadow-sm' 
-                  : 'hover:bg-white dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Yatırımlar
-              </div>
-            </Link>
-            <Link 
-              href="/app/settings" 
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                typeof window !== 'undefined' && window.location.pathname === '/app/settings' 
-                  ? 'bg-white dark:bg-gray-700 text-green-600 dark:text-green-400 shadow-sm' 
-                  : 'hover:bg-white dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Ayarlar
-              </div>
-            </Link>
-          </nav>
 
         {/* İstatistik Kartları */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -804,7 +758,7 @@ export default function CepFinansApp() {
               <Wallet className="h-5 w-5 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">₺{(balances.cash || 0).toFixed(2)}</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">₺{balances.cash.toFixed(2)}</div>
             </CardContent>
           </Card>
 
@@ -814,7 +768,7 @@ export default function CepFinansApp() {
               <Building className="h-5 w-5 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">₺{(balances.bank || 0).toFixed(2)}</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">₺{balances.bank.toFixed(2)}</div>
             </CardContent>
           </Card>
 
@@ -824,7 +778,7 @@ export default function CepFinansApp() {
               <PiggyBank className="h-5 w-5 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">₺{(balances.savings || 0).toFixed(2)}</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">₺{balances.savings.toFixed(2)}</div>
             </CardContent>
           </Card>
 
@@ -988,9 +942,9 @@ export default function CepFinansApp() {
                     <PieChart>
                       <Pie
                         data={[
-                          { name: 'Nakit', value: balances.cash || 0, color: '#10b981' },
-                          { name: 'Banka', value: balances.bank || 0, color: '#3b82f6' },
-                          { name: 'Birikim', value: balances.savings || 0, color: '#8b5cf6' }
+                          { name: 'Nakit', value: balances.cash, color: '#10b981' },
+                          { name: 'Banka', value: balances.bank, color: '#3b82f6' },
+                          { name: 'Birikim', value: balances.savings, color: '#8b5cf6' }
                         ]}
                         cx="50%"
                         cy="50%"
@@ -1001,9 +955,9 @@ export default function CepFinansApp() {
                         dataKey="value"
                       >
                         {[
-                          { name: 'Nakit', value: balances.cash || 0, color: '#10b981' },
-                          { name: 'Banka', value: balances.bank || 0, color: '#3b82f6' },
-                          { name: 'Birikim', value: balances.savings || 0, color: '#8b5cf6' }
+                          { name: 'Nakit', value: balances.cash, color: '#10b981' },
+                          { name: 'Banka', value: balances.bank, color: '#3b82f6' },
+                          { name: 'Birikim', value: balances.savings, color: '#8b5cf6' }
                         ].map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
@@ -1016,15 +970,15 @@ export default function CepFinansApp() {
                 <div className="grid grid-cols-3 gap-4 mt-4">
                   <div className="text-center p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
                     <div className="text-green-800 dark:text-green-200 font-semibold">{t('app.cash')}</div>
-                    <div className="text-green-600 dark:text-green-400 text-xl font-bold">₺{(balances.cash || 0).toFixed(2)}</div>
+                    <div className="text-green-600 dark:text-green-400 text-xl font-bold">₺{balances.cash.toFixed(2)}</div>
                   </div>
                   <div className="text-center p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
                     <div className="text-blue-800 dark:text-blue-200 font-semibold">{t('app.bank')}</div>
-                    <div className="text-blue-600 dark:text-blue-400 text-xl font-bold">₺{(balances.bank || 0).toFixed(2)}</div>
+                    <div className="text-blue-600 dark:text-blue-400 text-xl font-bold">₺{balances.bank.toFixed(2)}</div>
                   </div>
                   <div className="text-center p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
                     <div className="text-purple-800 dark:text-purple-200 font-semibold">{t('app.savings')}</div>
-                    <div className="text-purple-600 dark:text-purple-400 text-xl font-bold">₺{(balances.savings || 0).toFixed(2)}</div>
+                    <div className="text-purple-600 dark:text-purple-400 text-xl font-bold">₺{balances.savings.toFixed(2)}</div>
                   </div>
                 </div>
               </div>
@@ -1665,9 +1619,9 @@ function TransferForm({
   })
 
   const accounts = [
-    { value: 'cash', label: t('app.cash'), icon: Wallet, balance: balances.cash || 0 },
-    { value: 'bank', label: t('app.bank'), icon: Building, balance: balances.bank || 0 },
-    { value: 'savings', label: t('app.savings'), icon: PiggyBank, balance: balances.savings || 0 }
+    { value: 'cash', label: t('app.cash'), icon: Wallet, balance: balances.cash },
+    { value: 'bank', label: t('app.bank'), icon: Building, balance: balances.bank },
+    { value: 'savings', label: t('app.savings'), icon: PiggyBank, balance: balances.savings }
   ]
 
   const availableToAccounts = accounts.filter(acc => acc.value !== formData.from)
@@ -1677,7 +1631,7 @@ function TransferForm({
     if (!formData.amount || parseFloat(formData.amount) <= 0) return
 
     const amount = parseFloat(formData.amount)
-    if (amount > (balances[formData.from] || 0)) {
+    if (amount > balances[formData.from]) {
       alert(t('app.insufficientBalance'))
       return
     }
@@ -1755,7 +1709,7 @@ function TransferForm({
           value={formData.amount}
           onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
           placeholder="0.00"
-          max={balances[formData.from] || 0}
+          max={balances[formData.from]}
           required
         />
         {fromAccount && (
