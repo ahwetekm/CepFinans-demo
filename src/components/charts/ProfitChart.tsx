@@ -1,7 +1,11 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Investment } from '@/app/app/investments/page'
+import { Card, CardContent } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { TrendingUp, TrendingDown, BarChart3, Calendar, Target, DollarSign } from 'lucide-react'
 
 // Format price function
 const formatPrice = (price: number) => {
@@ -11,18 +15,43 @@ const formatPrice = (price: number) => {
   }).format(price)
 }
 
+// Modern currency gradient function
+const getCurrencyGradient = (currency: string) => {
+  const gradients: Record<string, { from: string; to: string; icon: string }> = {
+    'USD/TRY': { from: 'from-blue-500', to: 'to-blue-600', icon: '🇺🇸' },
+    'EUR/TRY': { from: 'from-green-500', to: 'to-green-600', icon: '🇪🇺' },
+    'GBP/TRY': { from: 'from-purple-500', to: 'to-purple-600', icon: '🇬🇧' },
+    'CHF/TRY': { from: 'from-yellow-500', to: 'to-yellow-600', icon: '🇨🇭' },
+    'SEK/TRY': { from: 'from-orange-500', to: 'to-orange-600', icon: '🇸🇪' },
+    'DKK/TRY': { from: 'from-red-500', to: 'to-red-600', icon: '🇩🇰' },
+    'NOK/TRY': { from: 'from-indigo-500', to: 'to-indigo-600', icon: '🇳🇴' },
+    'CAD/TRY': { from: 'from-pink-500', to: 'to-pink-600', icon: '🇨🇦' },
+    'AUD/TRY': { from: 'from-teal-500', to: 'to-teal-600', icon: '🇦🇺' },
+    'JPY/TRY': { from: 'from-cyan-500', to: 'to-cyan-600', icon: '🇯🇵' },
+    'KWD/TRY': { from: 'from-amber-500', to: 'to-amber-600', icon: '🇰🇼' },
+    'SAR/TRY': { from: 'from-lime-500', to: 'to-lime-600', icon: '🇸🇦' },
+    'BGN/TRY': { from: 'from-emerald-500', to: 'to-emerald-600', icon: '🇧🇬' },
+    'RON/TRY': { from: 'from-violet-500', to: 'to-violet-600', icon: '🇷🇴' },
+    'RUB/TRY': { from: 'from-rose-500', to: 'to-rose-600', icon: '🇷🇺' },
+    'IRR/TRY': { from: 'from-slate-500', to: 'to-slate-600', icon: '🇮🇷' },
+    'CNY/TRY': { from: 'from-zinc-500', to: 'to-zinc-600', icon: '🇨🇳' },
+    'PKR/TRY': { from: 'from-stone-500', to: 'to-stone-600', icon: '🇵🇰' },
+    'QAR/TRY': { from: 'from-fuchsia-500', to: 'to-fuchsia-600', icon: '🇶🇦' },
+    'AZN/TRY': { from: 'from-gray-500', to: 'to-gray-600', icon: '🇦🇿' }
+  }
+  return gradients[currency] || { from: 'from-gray-500', to: 'to-gray-600', icon: '💱' }
+}
+
 interface ProfitChartProps {
   investments: Investment[]
   selectedCurrency: string
 }
 
 export function ProfitChart({ investments, selectedCurrency }: ProfitChartProps) {
+  const [viewMode, setViewMode] = useState<'overview' | 'timeline'>('overview')
+  
   const chartData = useMemo(() => {
-    console.log('ProfitChart - investments received:', investments)
-    console.log('ProfitChart - selectedCurrency:', selectedCurrency)
-    
     if (!investments || investments.length === 0) {
-      console.log('ProfitChart - No investments provided')
       return {
         investments: [],
         totalInvestment: 0,
@@ -37,10 +66,7 @@ export function ProfitChart({ investments, selectedCurrency }: ProfitChartProps)
       ? investments 
       : investments.filter(inv => inv.currency === selectedCurrency)
 
-    console.log('ProfitChart - filteredInvestments:', filteredInvestments)
-    
     if (!filteredInvestments || filteredInvestments.length === 0) {
-      console.log('ProfitChart - No filtered investments')
       return {
         investments: [],
         totalInvestment: 0,
@@ -59,8 +85,6 @@ export function ProfitChart({ investments, selectedCurrency }: ProfitChartProps)
         return dateA - dateB
       })
 
-    console.log('ProfitChart - sortedInvestments:', sortedInvestments)
-
     // Calculate totals with extensive validation
     const totals = sortedInvestments.reduce((acc, inv) => {
       const buyPrice = Number(inv.buy_price) || 0
@@ -68,14 +92,11 @@ export function ProfitChart({ investments, selectedCurrency }: ProfitChartProps)
       const amount = Number(inv.amount) || 0
       
       if (isNaN(buyPrice) || isNaN(currentValue) || isNaN(amount)) {
-        console.log('Invalid investment data:', { buyPrice, currentValue, amount })
         return acc
       }
       
       const buyValue = buyPrice * amount
       const currentVal = currentValue * amount
-      
-      console.log(`Investment ${inv.currency}: buyValue=${buyValue}, currentVal=${currentVal}, amount=${amount}`)
       
       acc.totalInvestment += buyValue
       acc.currentValue += currentVal
@@ -89,31 +110,7 @@ export function ProfitChart({ investments, selectedCurrency }: ProfitChartProps)
       profitPercentage: 0
     })
 
-    console.log('ProfitChart - calculated totals:', totals)
-
     const { totalInvestment, currentValue, totalProfit } = totals
-
-    // Calculate max value for scaling
-    const allValues = sortedInvestments.map(inv => ({
-      buyValue: (Number(inv.buy_price) || 0) * (Number(inv.amount) || 0),
-      currentValue: (Number(inv.current_value) || 0) * (Number(inv.amount) || 0)
-    }))
-
-    const maxValue = Math.max(...allValues, 1)
-
-    console.log('ProfitChart - maxValue:', maxValue)
-
-    if (maxValue <= 0 || isNaN(maxValue)) {
-      console.log('Invalid maxValue, using fallback')
-      return {
-        investments: sortedInvestments,
-        totalInvestment: 0,
-        currentValue: 0,
-        totalProfit: 0,
-        profitPercentage: 0
-      }
-    }
-
     const profitPercentage = totalInvestment > 0 ? (totalProfit / totalInvestment) * 100 : 0
 
     return {
@@ -128,9 +125,10 @@ export function ProfitChart({ investments, selectedCurrency }: ProfitChartProps)
   // Render chart only if we have valid data
   if (!chartData || !chartData.investments || chartData.investments.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center text-center p-8">
+      <div className="flex flex-col items-center justify-center text-center p-8 bg-muted/20 rounded-xl border-2 border-dashed border-muted-foreground/20">
+        <BarChart3 className="w-12 h-12 text-muted-foreground mb-4" />
         <div className="text-center">
-          <h3 className="text-lg font-semibold mb-2">Grafik Verisi Bulunamadı</h3>
+          <h3 className="text-lg font-semibold mb-2 text-foreground">Grafik Verisi Bulunamadı</h3>
           <p className="text-muted-foreground">
             {selectedCurrency === 'all' ? 'Henüz yatırım verisi bulunmuyor' : `${selectedCurrency} için yatırım verisi bulunmuyor`}
           </p>
@@ -141,207 +139,194 @@ export function ProfitChart({ investments, selectedCurrency }: ProfitChartProps)
 
   // Extract data from chartData for easier access
   const { investments: investmentData, totalInvestment, currentValue, totalProfit, profitPercentage } = chartData
-
-  const chartHeight = 300
-  const chartWidth = 600
-  
-  // Calculate maximum value for scaling
-  const maxValue = Math.max(
-    ...investmentData.map(inv => {
-      const buyValue = (Number(inv.buy_price) || 0) * (Number(inv.amount) || 0)
-      const currentValue = (Number(inv.current_value) || 0) * (Number(inv.amount) || 0)
-      const maxValue = Math.max(buyValue, currentValue)
-      return !isNaN(maxValue) && maxValue > 0 ? maxValue : 1
-    }),
-    1 // Minimum fallback value
-  )
-  
-  const scale = maxValue > 0 ? (chartHeight - 60) / maxValue : 0
+  const currencyGradient = selectedCurrency !== 'all' ? getCurrencyGradient(selectedCurrency) : null
 
   return (
-    <div className="w-full space-y-6">
-      <h3 className="font-semibold text-lg mb-4">Yatırım Kar/Zarar Analizi</h3>
-      
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="text-center p-4 border rounded-lg">
-          <div className="text-2xl font-bold text-blue-600">
-            ₺{formatPrice(totalInvestment)}
+    <div className="space-y-6">
+      {/* Modern Header with View Mode Selector */}
+      <div className="bg-card rounded-xl border shadow-sm p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-xl font-bold text-foreground mb-2">Kar/Zarar Analizi</h3>
+            <p className="text-sm text-muted-foreground">
+              {selectedCurrency === 'all' 
+                ? 'Tüm yatırımlarınızın kar/zarar durumu' 
+                : `${selectedCurrency.split('/')[0]} yatırımlarınızın durumu`
+              }
+            </p>
           </div>
-          <div className="text-sm text-muted-foreground">Toplam Yatırım</div>
-        </div>
-        
-        <div className="text-center p-4 border rounded-lg">
-          <div className="text-2xl font-bold text-green-600">
-            ₺{formatPrice(currentValue)}
-          </div>
-          <div className="text-sm text-muted-foreground">Mevcut Değer</div>
-        </div>
-        
-        <div className="text-center p-4 border rounded-lg">
-          <div className={`text-2xl font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {totalProfit >= 0 ? '+' : ''}₺{formatPrice(totalProfit)}
-          </div>
-          <div className="text-sm text-muted-foreground">
-            Kar/Zarar ({profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(2)}%)
+          
+          <div className="flex gap-2">
+            <Select value={viewMode} onValueChange={(value: 'overview' | 'timeline') => setViewMode(value)}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Görünüm" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="overview">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4" />
+                    <span>Özet</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="timeline">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>Zaman Çizelgesi</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {selectedCurrency !== 'all' && (
+              <Badge className={`bg-gradient-to-r ${currencyGradient?.from} ${currencyGradient?.to} text-white border-0`}>
+                <span className="mr-2">{currencyGradient?.icon}</span>
+                {selectedCurrency}
+              </Badge>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Chart */}
-      <div className="bg-white p-4 rounded-lg border">
-        <svg width={chartWidth} height={chartHeight} className="w-full">
-          {/* Grid lines */}
-          {[0, 25, 50, 75, 100].map((percent) => {
-            const y = chartHeight - 30 - ((percent || 0) * scale * maxValue / 100)
-            const yValue = Math.max(0, chartHeight - 30 - ((percent || 0) * scale * maxValue / 100))
+      {/* Modern Summary Cards */}
+      <div className={`relative overflow-hidden rounded-xl border shadow-sm ${
+        selectedCurrency === 'all' 
+          ? 'bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200' 
+          : `bg-gradient-to-br ${currencyGradient?.from}/10 ${currencyGradient?.to}/10 border-${currencyGradient?.from}/20`
+      }`}>
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-5">
+          <div className={`absolute inset-0 bg-gradient-to-br ${
+            selectedCurrency === 'all' 
+              ? 'from-slate-400 to-slate-600' 
+              : `${currencyGradient?.from} ${currencyGradient?.to}`
+          }`} />
+        </div>
+        
+        <div className="relative p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Total Investment */}
+            <div className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto mb-3 rounded-full bg-blue-100 text-blue-600">
+                <DollarSign className="w-6 h-6" />
+              </div>
+              <div className="text-2xl font-bold text-foreground mb-1">
+                ₺{formatPrice(totalInvestment)}
+              </div>
+              <div className="text-sm text-muted-foreground">Toplam Yatırım</div>
+            </div>
             
-            return (
-              <g key={percent}>
-                <line
-                  x1={50}
-                  y1={y}
-                  x2={chartWidth - 50}
-                  y2={y}
-                  stroke="#e5e7eb"
-                  strokeDasharray="2,2"
-                />
-                <text
-                  x={40}
-                  y={yValue - 5}
-                  textAnchor="end"
-                  fontSize="12"
-                  fill="#6b7280"
-                >
-                  {percent}%
-                </text>
-              </g>
-            )
-          })}
-          
-          {/* Bars */}
-          {investmentData.map((investment, index) => {
+            {/* Current Value */}
+            <div className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto mb-3 rounded-full bg-green-100 text-green-600">
+                <Target className="w-6 h-6" />
+              </div>
+              <div className="text-2xl font-bold text-foreground mb-1">
+                ₺{formatPrice(currentValue)}
+              </div>
+              <div className="text-sm text-muted-foreground">Mevcut Değer</div>
+            </div>
+            
+            {/* Total Profit */}
+            <div className="text-center">
+              <div className={`flex items-center justify-center w-12 h-12 mx-auto mb-3 rounded-full ${
+                totalProfit >= 0 
+                  ? 'bg-green-100 text-green-600' 
+                  : 'bg-red-100 text-red-600'
+              }`}>
+                {totalProfit >= 0 ? (
+                  <TrendingUp className="w-6 h-6" />
+                ) : (
+                  <TrendingDown className="w-6 h-6" />
+                )}
+              </div>
+              <div className={`text-2xl font-bold mb-1 ${
+                totalProfit >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {totalProfit >= 0 ? '+' : ''}₺{formatPrice(totalProfit)}
+              </div>
+              <div className="text-sm text-muted-foreground">Kar/Zarar</div>
+            </div>
+            
+            {/* Profit Percentage */}
+            <div className="text-center">
+              <div className={`flex items-center justify-center w-12 h-12 mx-auto mb-3 rounded-full ${
+                profitPercentage >= 0 
+                  ? 'bg-green-100 text-green-600' 
+                  : 'bg-red-100 text-red-600'
+              }`}>
+                <BarChart3 className="w-6 h-6" />
+              </div>
+              <div className={`text-2xl font-bold mb-1 ${
+                profitPercentage >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(2)}%
+              </div>
+              <div className="text-sm text-muted-foreground">Yüzde Değişim</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Investment Details */}
+      <div className="bg-card rounded-xl border shadow-sm p-6">
+        <h4 className="text-lg font-semibold mb-4 text-foreground">Yatırım Detayları</h4>
+        <div className="space-y-3 max-h-96 overflow-y-auto">
+          {investmentData.map((investment) => {
             const buyValue = (Number(investment.buy_price) || 0) * (Number(investment.amount) || 0)
             const currentValue = (Number(investment.current_value) || 0) * (Number(investment.amount) || 0)
             const profit = currentValue - buyValue
-            const profitHeight = Math.abs(profit) * scale
-            
-            console.log('Investment:', {
-              id: investment.id,
-              buyValue,
-              currentValue,
-              profit,
-              scale,
-              profitHeight
-            })
-            
-            const x = 60 + index * 70
-            const buyHeight = buyValue * scale
-            const currentHeight = currentValue * scale
+            const profitPercentage = buyValue > 0 ? (profit / buyValue) * 100 : 0
+            const gradient = getCurrencyGradient(investment.currency)
+            const isProfit = profit >= 0
             
             return (
-              <g key={investment.id}>
-                {/* Buy value bar */}
-                <rect
-                  x={x}
-                  y={chartHeight - 30 - (typeof buyHeight === 'number' && !isNaN(buyHeight) && buyHeight > 0 ? buyHeight : 0)}
-                  width={50}
-                  height={typeof buyHeight === 'number' && !isNaN(buyHeight) && buyHeight > 0 ? buyHeight : 0}
-                  fill="#3b82f6"
-                  opacity={0.7}
-                />
-                
-                {/* Current value bar */}
-                <rect
-                  x={x + 20}
-                  y={chartHeight - 30 - (typeof currentHeight === 'number' && !isNaN(currentHeight) && currentHeight > 0 ? currentHeight : 0)}
-                  width={50}
-                  height={typeof currentHeight === 'number' && !isNaN(currentHeight) && currentHeight > 0 ? currentHeight : 0}
-                  fill={profit >= 0 ? '#10b981' : '#ef4444'}
-                  opacity={0.8}
-                />
-                
-                {/* Profit/Loss indicator */}
-                {profit !== 0 && typeof profitHeight === 'number' && !isNaN(profitHeight) && profitHeight > 0 && (
-                  <rect
-                    x={x + 35}
-                    y={chartHeight - 30 - profitHeight - 5}
-                    width={30}
-                    height={5}
-                    fill={profit >= 0 ? '#10b981' : '#ef4444'}
-                  />
-                )}
-                
-                {/* Investment info */}
-                <text
-                  x={x + 25}
-                  y={chartHeight - 15}
-                  textAnchor="middle"
-                  fontSize="10"
-                  fill="#374151"
-                >
-                  {investment.currency}
-                </text>
-                
-                {/* Profit/Loss text */}
-                <text
-                  x={x + 25}
-                  y={chartHeight - 30}
-                  textAnchor="middle"
-                  fontSize="12"
-                  fontWeight="bold"
-                  fill={profit >= 0 ? '#10b981' : '#ef4444'}
-                >
-                  {profit >= 0 ? '+' : ''}₺{formatPrice(profit)}
-                </text>
-              </g>
-            )
-          })}
-        </svg>
-      </div>
-
-      {/* Investment Details */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-lg">Yatırım Detayları</h3>
-        {chartData.investments.map((investment) => {
-          const buyValue = (Number(investment.buy_price) || 0) * (Number(investment.amount) || 0)
-          const currentValue = (Number(investment.current_value) || 0) * (Number(investment.amount) || 0)
-          const profit = currentValue - buyValue
-          const profitPercentage = buyValue > 0 ? (profit / buyValue) * 100 : 0
-          
-          return (
-            <div key={investment.id} className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex-1">
-                <div className="font-medium">{investment.currency} - {investment.currency_name}</div>
-                <div className="text-sm text-muted-foreground">
-                  Alış: {new Date(investment.buy_date).toLocaleDateString('tr-TR')} • {investment.amount} adet
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-6 text-right">
-                <div>
-                  <div className="text-sm text-muted-foreground">Alış</div>
-                  <div className="font-medium">₺{formatPrice(buyValue)}</div>
-                </div>
-                
-                <div>
-                  <div className="text-sm text-muted-foreground">Mevcut</div>
-                  <div className="font-medium">₺{formatPrice(currentValue)}</div>
-                </div>
-                
-                <div>
-                  <div className="text-sm text-muted-foreground">Kar/Zarar</div>
-                  <div className={`font-medium ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {profit >= 0 ? '+' : ''}₺{formatPrice(profit)}
-                    <div className="text-xs">
-                      ({profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(2)}%)
+              <Card key={investment.id} className="hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 text-lg">
+                        {gradient.icon}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-bold text-lg">{investment.currency}</span>
+                          <Badge variant={isProfit ? 'default' : 'destructive'} className="text-xs">
+                            {isProfit ? 'Kâr' : 'Zarar'}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {new Date(investment.buy_date).toLocaleDateString('tr-TR')} • {investment.amount} adet
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 text-right">
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Alış</div>
+                        <div className="font-medium">₺{formatPrice(buyValue)}</div>
+                      </div>
+                      
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Mevcut</div>
+                        <div className="font-medium">₺{formatPrice(currentValue)}</div>
+                      </div>
+                      
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Kar/Zarar</div>
+                        <div className={`font-medium ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
+                          {isProfit ? '+' : ''}₺{formatPrice(profit)}
+                        </div>
+                        <div className={`text-xs ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
+                          ({isProfit ? '+' : ''}{profitPercentage.toFixed(2)}%)
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          )
-        })}
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
       </div>
     </div>
   )

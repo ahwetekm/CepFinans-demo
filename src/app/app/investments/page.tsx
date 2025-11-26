@@ -584,10 +584,22 @@ export default function InvestmentsPage() {
   ]
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('tr-TR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(price)
+    if (price >= 1000000) {
+      return new Intl.NumberFormat('tr-TR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(price)
+    } else if (price >= 1000) {
+      return new Intl.NumberFormat('tr-TR', {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1
+      }).format(price)
+    } else {
+      return new Intl.NumberFormat('tr-TR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(price)
+    }
   }
 
   const formatLargeNumber = (num: string) => {
@@ -600,9 +612,9 @@ export default function InvestmentsPage() {
 
   const renderCurrencyTable = (data: CurrencyItem[]) => (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-semibold">Döviz Kurları</h3>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-lg font-semibold truncate">Döviz Kurları</h3>
           <p className="text-sm text-muted-foreground">
             {currencyData.length > 0 ? `Gösterilen: ${displayedCurrencies.length} / ${currencyData.length}` : 'Yükleniyor...'}
           </p>
@@ -617,9 +629,11 @@ export default function InvestmentsPage() {
           size="sm" 
           onClick={fetchCurrencyData}
           disabled={isLoadingCurrency}
+          className="shrink-0"
         >
           <RefreshCw className={`w-4 h-4 mr-2 ${isLoadingCurrency ? 'animate-spin' : ''}`} />
-          {isLoadingCurrency ? 'Yenileniyor...' : 'Yenile'}
+          <span className="hidden sm:inline">{isLoadingCurrency ? 'Yenileniyor...' : 'Yenile'}</span>
+          <span className="sm:hidden">{isLoadingCurrency ? '...' : '↻'}</span>
         </Button>
       </div>
       <div className="grid gap-4">
@@ -633,43 +647,60 @@ export default function InvestmentsPage() {
         ) : (
           <>
             {data.map((item) => (
-              <Card key={item.symbol} className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
+              <Card key={item.symbol} className="p-4 hover:shadow-md transition-shadow duration-200">
+                <div className="space-y-4">
+                  {/* Sol taraf - Döviz bilgileri */}
+                  <div className="flex items-start space-x-3">
+                    <div className="p-2 bg-primary/10 rounded-lg shrink-0">
                       {item.icon}
                     </div>
-                    <div>
-                      <div className="font-semibold">{item.symbol}</div>
-                      <div className="text-sm text-muted-foreground">{item.name}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-base sm:text-lg truncate" title={item.symbol}>{item.symbol}</div>
+                      <div className="text-sm text-muted-foreground truncate" title={item.name}>{item.name}</div>
                       {item.forexBuying && item.forexSelling && (
-                        <div className="text-xs text-muted-foreground">
-                          Alış: ₺{formatPrice(item.forexBuying)} | Satış: ₺{formatPrice(item.forexSelling)}
+                        <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                          <div className="truncate" title={`Alış: ₺${formatPrice(item.forexBuying)}`}>
+                            <span className="font-medium">Alış:</span> ₺{formatPrice(item.forexBuying)}
+                          </div>
+                          <div className="truncate" title={`Satış: ₺${formatPrice(item.forexSelling)}`}>
+                            <span className="font-medium">Satış:</span> ₺{formatPrice(item.forexSelling)}
+                          </div>
                         </div>
                       )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-semibold text-lg">₺{formatPrice(item.price)}</div>
-                    <div className={`flex items-center justify-end space-x-1 ${
-                      item.change >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {item.change >= 0 ? (
-                        <ArrowUpRight className="w-4 h-4" />
-                      ) : (
-                        <ArrowDownRight className="w-4 h-4" />
-                      )}
-                      <span className="text-sm font-medium">
-                        {item.change >= 0 ? '+' : ''}{formatPrice(item.change)} ({item.changePercent >= 0 ? '+' : ''}{item.changePercent.toFixed(2)}%)
-                      </span>
+                  
+                  {/* Sağ taraf - Fiyat ve işlem */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex-1 sm:flex-none">
+                      <div className="text-right sm:text-left">
+                        <div className="font-bold text-lg sm:text-xl text-foreground whitespace-nowrap" title={`Fiyat: ₺${formatPrice(item.price)}`}>
+                          ₺{formatPrice(item.price)}
+                        </div>
+                        <div className={`flex items-center sm:justify-start justify-end space-x-1 mt-1 ${
+                          item.change >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                        }`}>
+                          {item.change >= 0 ? (
+                            <ArrowUpRight className="w-4 h-4 shrink-0" />
+                          ) : (
+                            <ArrowDownRight className="w-4 h-4 shrink-0" />
+                          )}
+                          <span className="text-sm font-medium"
+                            title={`Değişim: ${item.change >= 0 ? '+' : ''}${formatPrice(item.change)} (${item.changePercent >= 0 ? '+' : ''}${item.changePercent.toFixed(2)}%)`}
+                          >
+                            {item.change >= 0 ? '+' : ''}{formatPrice(item.change)} ({item.changePercent >= 0 ? '+' : ''}{item.changePercent.toFixed(2)}%)
+                          </span>
+                        </div>
+                      </div>
                     </div>
                     <Button 
                       size="sm" 
-                      className="mt-2"
+                      className="w-full sm:w-auto shrink-0"
                       onClick={() => openInvestmentDialog(item)}
                     >
                       <Zap className="w-4 h-4 mr-1" />
-                      Hızlı Yatırım
+                      <span className="hidden sm:inline">Hızlı Yatırım</span>
+                      <span className="sm:hidden">Yatırım</span>
                     </Button>
                   </div>
                 </div>
@@ -695,40 +726,52 @@ export default function InvestmentsPage() {
 
   const renderCryptoTable = (data: CryptoItem[]) => (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Kripto Paralar</h3>
-        <Button variant="outline" size="sm">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-lg font-semibold truncate">Kripto Paralar</h3>
+        </div>
+        <Button variant="outline" size="sm" className="shrink-0">
           <RefreshCw className="w-4 h-4 mr-2" />
-          Yenile
+          <span className="hidden sm:inline">Yenile</span>
+          <span className="sm:hidden">↻</span>
         </Button>
       </div>
       <div className="grid gap-4">
         {data.map((item) => (
-          <Card key={item.symbol} className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
+          <Card key={item.symbol} className="p-4 hover:shadow-md transition-shadow duration-200">
+            <div className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <div className="p-2 bg-primary/10 rounded-lg shrink-0">
                   {item.icon}
                 </div>
-                <div>
-                  <div className="font-semibold">{item.symbol}</div>
-                  <div className="text-sm text-muted-foreground">{item.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Hacim: {formatLargeNumber(item.volume)} | Piyasa Değeri: {formatLargeNumber(item.marketCap)}
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-base sm:text-lg truncate" title={item.symbol}>{item.symbol}</div>
+                  <div className="text-sm text-muted-foreground truncate" title={item.name}>{item.name}</div>
+                  <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                    <div className="truncate" title={`Hacim: ${formatLargeNumber(item.volume)}`}>
+                      <span className="font-medium">Hacim:</span> {formatLargeNumber(item.volume)}
+                    </div>
+                    <div className="truncate" title={`Piyasa Değeri: ${formatLargeNumber(item.marketCap)}`}>
+                      <span className="font-medium">Piyasa:</span> {formatLargeNumber(item.marketCap)}
+                    </div>
                   </div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="font-semibold text-lg">${formatPrice(item.price)}</div>
-                <div className={`flex items-center justify-end space-x-1 ${
-                  item.change >= 0 ? 'text-green-600' : 'text-red-600'
+                <div className="font-bold text-lg sm:text-xl text-foreground whitespace-nowrap" title={`Fiyat: $${formatPrice(item.price)}`}>
+                  ${formatPrice(item.price)}
+                </div>
+                <div className={`flex items-center justify-end space-x-1 mt-1 ${
+                  item.change >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                 }`}>
                   {item.change >= 0 ? (
-                    <ArrowUpRight className="w-4 h-4" />
+                    <ArrowUpRight className="w-4 h-4 shrink-0" />
                   ) : (
-                    <ArrowDownRight className="w-4 h-4" />
+                    <ArrowDownRight className="w-4 h-4 shrink-0" />
                   )}
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-medium"
+                    title={`Değişim: ${item.change >= 0 ? '+' : ''}${formatPrice(item.change)} (${item.changePercent >= 0 ? '+' : ''}${item.changePercent}%)`}
+                  >
                     {item.change >= 0 ? '+' : ''}{formatPrice(item.change)} ({item.changePercent >= 0 ? '+' : ''}{item.changePercent}%)
                   </span>
                 </div>
@@ -742,38 +785,45 @@ export default function InvestmentsPage() {
 
   const renderCommodityTable = (data: CommodityItem[]) => (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Madenler</h3>
-        <Button variant="outline" size="sm">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-lg font-semibold truncate">Madenler</h3>
+        </div>
+        <Button variant="outline" size="sm" className="shrink-0">
           <RefreshCw className="w-4 h-4 mr-2" />
-          Yenile
+          <span className="hidden sm:inline">Yenile</span>
+          <span className="sm:hidden">↻</span>
         </Button>
       </div>
       <div className="grid gap-4">
         {data.map((item) => (
-          <Card key={item.symbol} className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
+          <Card key={item.symbol} className="p-4 hover:shadow-md transition-shadow duration-200">
+            <div className="space-y-4">
+              <div className="flex items-start space-x-3">
+                <div className="p-2 bg-primary/10 rounded-lg shrink-0">
                   {item.icon}
                 </div>
-                <div>
-                  <div className="font-semibold">{item.symbol}</div>
-                  <div className="text-sm text-muted-foreground">{item.name}</div>
-                  <div className="text-xs text-muted-foreground">{item.unit}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-base sm:text-lg truncate" title={item.symbol}>{item.symbol}</div>
+                  <div className="text-sm text-muted-foreground truncate" title={item.name}>{item.name}</div>
+                  <div className="text-xs text-muted-foreground mt-2 truncate" title={item.unit}>{item.unit}</div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="font-semibold text-lg">₺{formatPrice(item.price)}</div>
-                <div className={`flex items-center justify-end space-x-1 ${
-                  item.change >= 0 ? 'text-green-600' : 'text-red-600'
+                <div className="font-bold text-lg sm:text-xl text-foreground whitespace-nowrap" title={`Fiyat: ₺${formatPrice(item.price)}`}>
+                  ₺{formatPrice(item.price)}
+                </div>
+                <div className={`flex items-center justify-end space-x-1 mt-1 ${
+                  item.change >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                 }`}>
                   {item.change >= 0 ? (
-                    <ArrowUpRight className="w-4 h-4" />
+                    <ArrowUpRight className="w-4 h-4 shrink-0" />
                   ) : (
-                    <ArrowDownRight className="w-4 h-4" />
+                    <ArrowDownRight className="w-4 h-4 shrink-0" />
                   )}
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-medium"
+                    title={`Değişim: ${item.change >= 0 ? '+' : ''}${formatPrice(item.change)} (${item.changePercent >= 0 ? '+' : ''}${item.changePercent}%)`}
+                  >
                     {item.change >= 0 ? '+' : ''}{formatPrice(item.change)} ({item.changePercent >= 0 ? '+' : ''}{item.changePercent}%)
                   </span>
                 </div>
