@@ -16,6 +16,7 @@ import { UserAuthButton } from '@/components/auth/UserAuthButton'
 import { PieChart } from '@/components/charts/PieChart'
 import { ProfitChart } from '@/components/charts/ProfitChart'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 interface CurrencyItem {
@@ -54,14 +55,17 @@ interface CommodityItem {
 
 interface Investment {
   id: string
+  user_id: string
   currency: string
-  currencyName: string
+  currency_name: string
   amount: number
-  buyPrice: number
-  buyDate: string
-  currentValue: number
+  buy_price: number
+  buy_date: string
+  current_value: number
   profit: number
-  profitPercent: number
+  profit_percent: number
+  created_at: string
+  updated_at: string
 }
 
 interface InvestmentFormData {
@@ -81,10 +85,15 @@ export default function InvestmentsPage() {
   const [visibleCount, setVisibleCount] = useState(8)
   const [hasMore, setHasMore] = useState(true)
   
+  // User state
+  const [user, setUser] = useState<any>(null)
+  const [isLoadingUser, setIsLoadingUser] = useState(true)
+  
   // Investment states
   const [showInvestmentDialog, setShowInvestmentDialog] = useState(false)
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyItem | null>(null)
   const [investments, setInvestments] = useState<Investment[]>([])
+  const [isLoadingInvestments, setIsLoadingInvestments] = useState(false)
   const [investmentForm, setInvestmentForm] = useState<InvestmentFormData>({
     currency: '',
     currencyName: '',
@@ -99,6 +108,59 @@ export default function InvestmentsPage() {
   const [showStatisticsDialog, setShowStatisticsDialog] = useState(false)
   const [selectedChartType, setSelectedChartType] = useState<'pie' | 'profit'>('pie')
   const [selectedCurrencyForChart, setSelectedCurrencyForChart] = useState<string>('all')
+
+  // Check user authentication
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        setUser(user)
+        
+        if (user) {
+          // Fetch user's investments
+          fetchInvestments(user.id)
+        }
+      } catch (error) {
+        console.error('User check error:', error)
+      } finally {
+        setIsLoadingUser(false)
+      }
+    }
+
+    checkUser()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null)
+      if (session?.user) {
+        fetchInvestments(session.user.id)
+      } else {
+        setInvestments([])
+      }
+      setIsLoadingUser(false)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Fetch investments from Supabase
+  const fetchInvestments = async (userId: string) => {
+    setIsLoadingInvestments(true)
+    try {
+      const response = await fetch(`/api/investments?userId=${userId}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        setInvestments(result.data || [])
+      } else {
+        console.error('Failed to fetch investments:', result.error)
+      }
+    } catch (error) {
+      console.error('Investments fetch error:', error)
+    } finally {
+      setIsLoadingInvestments(false)
+    }
+  }
 
   // TCMB'den döviz verilerini çek
   const fetchCurrencyData = async () => {
@@ -172,33 +234,45 @@ export default function InvestmentsPage() {
 
   // Create investment
   const createInvestment = async () => {
-    if (!selectedCurrency || investmentForm.amount <= 0) return
+    if (!selectedCurrency || investmentForm.amount <= 0 || !user) return
     
     setIsCreatingInvestment(true)
     try {
       const buyPrice = historicalPrice || selectedCurrency.price
-      const investment: Investment = {
-        id: Date.now().toString(),
-        currency: selectedCurrency.symbol,
-        currencyName: selectedCurrency.name,
-        amount: investmentForm.amount,
-        buyPrice: buyPrice,
-        buyDate: investmentForm.date,
-        currentValue: selectedCurrency.price,
-        profit: (selectedCurrency.price - buyPrice) * investmentForm.amount,
-        profitPercent: ((selectedCurrency.price - buyPrice) / buyPrice) * 100
-      }
       
-      setInvestments(prev => [investment, ...prev])
-      setShowInvestmentDialog(false)
-      setInvestmentForm({
-        currency: '',
-        currencyName: '',
-        amount: 0,
-        date: new Date().toISOString().split('T')[0]
+      const response = await fetch('/api/investments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          currency: selectedCurrency.symbol,
+          currencyName: selectedCurrency.name,
+          amount: investmentForm.amount,
+          buyPrice: buyPrice,
+          buyDate: investmentForm.date
+        })
       })
-      setHistoricalPrice(null)
-      setSelectedCurrency(null)
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        // Refresh investments list
+        await fetchInvestments(user.id)
+        
+        setShowInvestmentDialog(false)
+        setInvestmentForm({
+          currency: '',
+          currencyName: '',
+          amount: 0,
+          date: new Date().toISOString().split('T')[0]
+        })
+        setHistoricalPrice(null)
+        setSelectedCurrency(null)
+      } else {
+        console.error('Investment creation error:', result.error)
+      }
     } catch (error) {
       console.error('Investment creation error:', error)
     } finally {
@@ -811,7 +885,7 @@ export default function InvestmentsPage() {
       </Dialog>
 
       {/* Your Investments Section */}
-      {investments.length > 0 && (
+      {user && investments.length > 0 && (
         <div className="container mx-auto px-4 py-6">
           <Card>
             <CardHeader>
@@ -843,19 +917,19 @@ export default function InvestmentsPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="font-semibold">{investment.currency}</div>
-                        <div className="text-sm text-muted-foreground">{investment.currencyName}</div>
+                        <div className="text-sm text-muted-foreground">{investment.currency_name}</div>
                         <div className="text-xs text-muted-foreground">
-                          Alış: {new Date(investment.buyDate).toLocaleDateString('tr-TR')}
+                          Alış: {new Date(investment.buy_date).toLocaleDateString('tr-TR')}
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="font-semibold">
-                          ₺{formatPrice(investment.amount * investment.currentValue)}
+                          ₺{formatPrice(investment.amount * investment.current_value)}
                         </div>
                         <div className={`text-sm ${
                           investment.profit >= 0 ? 'text-green-600' : 'text-red-600'
                         }`}>
-                          {investment.profit >= 0 ? '+' : ''}₺{formatPrice(investment.profit)} ({investment.profitPercent >= 0 ? '+' : ''}{investment.profitPercent.toFixed(2)}%)
+                          {investment.profit >= 0 ? '+' : ''}₺{formatPrice(investment.profit)} ({investment.profit_percent >= 0 ? '+' : ''}{investment.profit_percent.toFixed(2)}%)
                         </div>
                       </div>
                     </div>
@@ -933,7 +1007,7 @@ export default function InvestmentsPage() {
               <Card>
                 <CardContent className="p-4">
                   <div className="text-2xl font-bold text-blue-600">
-                    ₺{formatPrice(investments.reduce((sum, inv) => sum + (inv.amount * inv.buyPrice), 0))}
+                    ₺{formatPrice(investments.reduce((sum, inv) => sum + (inv.amount * inv.buy_price), 0))}
                   </div>
                   <div className="text-sm text-muted-foreground">Toplam Yatırım</div>
                 </CardContent>
@@ -942,7 +1016,7 @@ export default function InvestmentsPage() {
               <Card>
                 <CardContent className="p-4">
                   <div className="text-2xl font-bold text-green-600">
-                    ₺{formatPrice(investments.reduce((sum, inv) => sum + (inv.amount * inv.currentValue), 0))}
+                    ₺{formatPrice(investments.reduce((sum, inv) => sum + (inv.amount * inv.current_value), 0))}
                   </div>
                   <div className="text-sm text-muted-foreground">Mevcut Değer</div>
                 </CardContent>
@@ -965,7 +1039,7 @@ export default function InvestmentsPage() {
                     investments.reduce((sum, inv) => sum + inv.profit, 0) >= 0 ? 'text-green-600' : 'text-red-600'
                   }`}>
                     {investments.length > 0 ? (
-                      ((investments.reduce((sum, inv) => sum + inv.profit, 0) / investments.reduce((sum, inv) => sum + (inv.amount * inv.buyPrice), 0)) * 100).toFixed(2)
+                      ((investments.reduce((sum, inv) => sum + inv.profit, 0) / investments.reduce((sum, inv) => sum + (inv.amount * inv.buy_price), 0)) * 100).toFixed(2)
                     ) : '0.00'}%
                   </div>
                   <div className="text-sm text-muted-foreground">Getiri Oranı</div>
@@ -975,6 +1049,35 @@ export default function InvestmentsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Authentication Message */}
+      {!isLoadingUser && !user && (
+        <div className="container mx-auto px-4 py-6">
+          <Card>
+            <CardContent className="p-8 text-center">
+              <div className="text-lg font-semibold mb-2">Yatırımlarınızı görmek için giriş yapın</div>
+              <div className="text-muted-foreground mb-4">
+                Yatırım yapmak ve portföyünüzü takip etmek için lütfen hesabınıza giriş yapın.
+              </div>
+              <UserAuthButton />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* No Investments Message */}
+      {user && !isLoadingInvestments && investments.length === 0 && (
+        <div className="container mx-auto px-4 py-6">
+          <Card>
+            <CardContent className="p-8 text-center">
+              <div className="text-lg font-semibold mb-2">Henüz yatırım yapmadınız</div>
+              <div className="text-muted-foreground mb-4">
+                İlk yatırımınızı yapmak için yukarıdaki döviz listesinden seçim yapabilirsiniz.
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
