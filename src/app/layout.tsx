@@ -8,27 +8,60 @@ import PageTransition from "@/components/page-transition";
 
 // Meta bilgileri
 export const metadata: Metadata = {
-  title: "ButcApp - Kişisel Muhasebe",
-  description: "Nakit, birikim ve banka hesabınızı takip edin. Kişisel muhasebe uygulaması.",
-  keywords: ["ButcApp", "muhasebe", "finans", "bütçe", "kişisel finans"],
+  title: "ButcApp - Kişisel Muhasebe ve Finans Yönetimi",
+  description: "ButcApp ile nakit, birikim ve banka hesaplarınızı tek yerden yönetin. Ücretsiz, güvenli ve modern kişisel finans uygulaması. Bütçe takibi, yatırım analizi ve daha fazlası.",
+  keywords: ["ButcApp", "kişisel finans", "muhasebe", "bütçe", "finans yönetimi", "para takibi", "yatırım", "birikim", "banka hesabı", "nakit takibi"],
   authors: [{ name: "ButcApp Team" }],
+  creator: "ButcApp",
+  publisher: "ButcApp",
+  category: "finance",
+  classification: "Personal Finance Management",
+  referrer: "origin-when-cross-origin",
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon-16x16.png",
     apple: "/favicon.png",
   },
   openGraph: {
-    title: "ButcApp - Kişisel Muhasebe",
-    description: "Nakit, birikim ve banka hesabınızı takip edin",
-    url: "https://chat.z.ai",
+    title: "ButcApp - Modern Kişisel Finans Yönetimi",
+    description: "Ücretsiz kişisel finans uygulaması. Nakit, birikim ve banka hesaplarınızı tek yerden yönetin. Bütçe takibi, yatırım analizi ve daha fazlası.",
+    url: "https://butcapp.com",
     siteName: "ButcApp",
     type: "website",
+    locale: "tr_TR",
+    images: [
+      {
+        url: "https://butcapp.com/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "ButcApp - Kişisel Finans Yönetimi"
+      }
+    ]
   },
   twitter: {
     card: "summary_large_image",
-    title: "ButcApp - Kişisel Muhasebe",
-    description: "Nakit, birikim ve banka hesabınızı takip edin",
+    title: "ButcApp - Modern Kişisel Finans Yönetimi",
+    description: "Ücretsiz kişisel finans uygulaması. Nakit, birikim ve banka hesaplarınızı tek yerden yönetin.",
+    images: ["https://butcapp.com/og-image.png"],
+    creator: "@butcapp",
+    site: "@butcapp"
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    google: 'google-site-verification-code-here',
+    yandex: 'yandex-verification-code-here',
+    yahoo: 'yahoo-site-verification-code-here'
+  }
 };
 
 export default function RootLayout({

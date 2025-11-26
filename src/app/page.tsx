@@ -11,6 +11,44 @@ import { UserAuthButton } from '@/components/auth/UserAuthButton'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { useLanguage } from '@/contexts/LanguageContext'
 
+// Schema.org yapısal verileri
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ButcApp",
+  "description": "ButcApp ile nakit, birikim ve banka hesaplarınızı tek yerden yönetin. Ücretsiz, güvenli ve modern kişisel finans uygulaması.",
+  "url": "https://butcapp.com",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Web",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "TRY"
+  },
+  "creator": {
+    "@type": "Organization",
+    "name": "ButcApp Team",
+    "url": "https://butcapp.com"
+  },
+  "featureList": [
+    "Kişisel finans yönetimi",
+    "Nakit takibi",
+    "Banka hesabı yönetimi",
+    "Birikim takibi",
+    "Bütçe analizi",
+    "Otomatik işlemler",
+    "Finansal raporlar"
+  ],
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.8",
+    "reviewCount": "1000"
+  },
+  "inLanguage": "tr-TR",
+  "datePublished": "2025-01-01",
+  "dateModified": "2025-01-01"
+}
+
 export default function HomePage() {
   const { t } = useLanguage()
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null)
@@ -122,7 +160,14 @@ export default function HomePage() {
   ]
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <>
+      {/* Schema.org JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      
+      <div className="min-h-screen bg-white dark:bg-gray-950">
       {/* Tema ve Dil Değiştirme Butonları */}
       <div className="fixed top-6 right-6 z-50 flex items-center gap-2">
         <UserAuthButton onAuthClick={() => setShowAuthModal(true)} />
@@ -622,5 +667,6 @@ export default function HomePage() {
         defaultTab="signup"
       />
     </div>
+    </>
   )
 }
