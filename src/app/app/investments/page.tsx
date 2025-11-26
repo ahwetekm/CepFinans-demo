@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -21,6 +21,8 @@ interface CurrencyItem {
   volume?: string
   marketCap?: string
   icon: React.ReactNode
+  forexBuying?: number
+  forexSelling?: number
 }
 
 interface CryptoItem {
@@ -47,42 +49,64 @@ interface CommodityItem {
 export default function InvestmentsPage() {
   const { t } = useLanguage()
   const [selectedTab, setSelectedTab] = useState('currency')
+  const [currencyData, setCurrencyData] = useState<CurrencyItem[]>([])
+  const [isLoadingCurrency, setIsLoadingCurrency] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  // Örnek veriler - sonradan API ile değiştirilecek
-  const currencyData: CurrencyItem[] = [
-    {
-      symbol: 'USD/TRY',
-      name: 'Amerikan Doları',
-      price: 32.45,
-      change: 0.15,
-      changePercent: 0.46,
-      icon: <DollarSign className="w-5 h-5" />
-    },
-    {
-      symbol: 'EUR/TRY',
-      name: 'Euro',
-      price: 35.12,
-      change: -0.08,
-      changePercent: -0.23,
-      icon: <DollarSign className="w-5 h-5" />
-    },
-    {
-      symbol: 'GBP/TRY',
-      name: 'İngiliz Sterlini',
-      price: 40.78,
-      change: 0.22,
-      changePercent: 0.54,
-      icon: <DollarSign className="w-5 h-5" />
-    },
-    {
-      symbol: 'CHF/TRY',
-      name: 'İsviçre Frangı',
-      price: 36.91,
-      change: -0.12,
-      changePercent: -0.32,
-      icon: <DollarSign className="w-5 h-5" />
+  // TCMB'den döviz verilerini çek
+  const fetchCurrencyData = async () => {
+    setIsLoadingCurrency(true)
+    try {
+      const response = await fetch('/api/currency')
+      const result = await response.json()
+      
+      if (result.success) {
+        const data = result.data.map((item: any) => ({
+          symbol: item.symbol,
+          name: item.name.replace('ABD DOLARI', 'Amerikan Doları')
+                     .replace('İNGİLİZ STERLİNİ', 'İngiliz Sterlini')
+                     .replace('İSVİÇRE FRANGI', 'İsviçre Frangı'),
+          price: item.price,
+          change: item.change,
+          changePercent: item.changePercent,
+          forexBuying: item.forexBuying,
+          forexSelling: item.forexSelling,
+          icon: <DollarSign className="w-5 h-5" />
+        }))
+        setCurrencyData(data)
+        setLastUpdated(new Date())
+      } else {
+        // Fallback data
+        const fallbackData = result.data.map((item: any) => ({
+          symbol: item.symbol,
+          name: item.name.replace('ABD DOLARI', 'Amerikan Doları')
+                     .replace('İNGİLİZ STERLİNİ', 'İngiliz Sterlini')
+                     .replace('İSVİÇRE FRANGI', 'İsviçre Frangı'),
+          price: item.price,
+          change: item.change,
+          changePercent: item.changePercent,
+          forexBuying: item.forexBuying,
+          forexSelling: item.forexSelling,
+          icon: <DollarSign className="w-5 h-5" />
+        }))
+        setCurrencyData(fallbackData)
+        setLastUpdated(new Date())
+      }
+    } catch (error) {
+      console.error('Döviz verileri çekilemedi:', error)
+    } finally {
+      setIsLoadingCurrency(false)
     }
-  ]
+  }
+
+  useEffect(() => {
+    fetchCurrencyData()
+    
+    // Her 5 dakikada bir verileri yenile
+    const interval = setInterval(fetchCurrencyData, 5 * 60 * 1000)
+    
+    return () => clearInterval(interval)
+  }, [])
 
   const cryptoData: CryptoItem[] = [
     {
@@ -184,43 +208,69 @@ export default function InvestmentsPage() {
   const renderCurrencyTable = (data: CurrencyItem[]) => (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Döviz Kurları</h3>
-        <Button variant="outline" size="sm">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Yenile
+        <div>
+          <h3 className="text-lg font-semibold">Döviz Kurları</h3>
+          {lastUpdated && (
+            <p className="text-sm text-muted-foreground">
+              Son güncelleme: {lastUpdated.toLocaleTimeString('tr-TR')}
+            </p>
+          )}
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={fetchCurrencyData}
+          disabled={isLoadingCurrency}
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${isLoadingCurrency ? 'animate-spin' : ''}`} />
+          {isLoadingCurrency ? 'Yenileniyor...' : 'Yenile'}
         </Button>
       </div>
       <div className="grid gap-4">
-        {data.map((item) => (
-          <Card key={item.symbol} className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  {item.icon}
-                </div>
-                <div>
-                  <div className="font-semibold">{item.symbol}</div>
-                  <div className="text-sm text-muted-foreground">{item.name}</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="font-semibold text-lg">₺{formatPrice(item.price)}</div>
-                <div className={`flex items-center justify-end space-x-1 ${
-                  item.change >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {item.change >= 0 ? (
-                    <ArrowUpRight className="w-4 h-4" />
-                  ) : (
-                    <ArrowDownRight className="w-4 h-4" />
-                  )}
-                  <span className="text-sm font-medium">
-                    {item.change >= 0 ? '+' : ''}{formatPrice(item.change)} ({item.changePercent >= 0 ? '+' : ''}{item.changePercent}%)
-                  </span>
-                </div>
-              </div>
+        {data.length === 0 ? (
+          <Card className="p-8">
+            <div className="text-center text-muted-foreground">
+              <RefreshCw className="w-8 h-8 mx-auto mb-2 animate-spin" />
+              <p>Döviz verileri yükleniyor...</p>
             </div>
           </Card>
-        ))}
+        ) : (
+          data.map((item) => (
+            <Card key={item.symbol} className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    {item.icon}
+                  </div>
+                  <div>
+                    <div className="font-semibold">{item.symbol}</div>
+                    <div className="text-sm text-muted-foreground">{item.name}</div>
+                    {item.forexBuying && item.forexSelling && (
+                      <div className="text-xs text-muted-foreground">
+                        Alış: ₺{formatPrice(item.forexBuying)} | Satış: ₺{formatPrice(item.forexSelling)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-semibold text-lg">₺{formatPrice(item.price)}</div>
+                  <div className={`flex items-center justify-end space-x-1 ${
+                    item.change >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {item.change >= 0 ? (
+                      <ArrowUpRight className="w-4 h-4" />
+                    ) : (
+                      <ArrowDownRight className="w-4 h-4" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {item.change >= 0 ? '+' : ''}{formatPrice(item.change)} ({item.changePercent >= 0 ? '+' : ''}{item.changePercent.toFixed(2)}%)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   )
