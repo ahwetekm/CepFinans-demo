@@ -10,14 +10,11 @@ interface ProfitChartProps {
 
 export function ProfitChart({ investments, selectedCurrency }: ProfitChartProps) {
   const chartData = useMemo(() => {
-    if (investments.length === 0) return []
-
-    // Filter investments based on selected currency
-    const filteredInvestments = selectedCurrency === 'all' 
-      ? investments 
-      : investments.filter(inv => inv.currency === selectedCurrency)
-
-    if (filteredInvestments.length === 0) {
+    console.log('ProfitChart - investments received:', investments)
+    console.log('ProfitChart - selectedCurrency:', selectedCurrency)
+    
+    if (!investments || investments.length === 0) {
+      console.log('ProfitChart - No investments provided')
       return {
         investments: [],
         totalInvestment: 0,
@@ -27,15 +24,88 @@ export function ProfitChart({ investments, selectedCurrency }: ProfitChartProps)
       }
     }
 
-    // Sort by buy date
-    const sortedInvestments = [...filteredInvestments].sort((a, b) => 
-      new Date(a.buy_date).getTime() - new Date(b.buy_date).getTime()
-    )
+    // Filter investments based on selected currency
+    const filteredInvestments = selectedCurrency === 'all' 
+      ? investments 
+      : investments.filter(inv => inv.currency === selectedCurrency)
 
-    // Calculate cumulative data
-    const totalInvestment = sortedInvestments.reduce((sum, inv) => sum + (inv.amount * inv.buy_price), 0)
-    const currentValue = sortedInvestments.reduce((sum, inv) => sum + (inv.amount * inv.current_value), 0)
-    const totalProfit = currentValue - totalInvestment
+    console.log('ProfitChart - filteredInvestments:', filteredInvestments)
+    
+    if (!filteredInvestments || filteredInvestments.length === 0) {
+      console.log('ProfitChart - No filtered investments')
+      return {
+        investments: [],
+        totalInvestment: 0,
+        currentValue: 0,
+        totalProfit: 0,
+        profitPercentage: 0
+      }
+    }
+
+    // Sort by buy date and validate data
+    const sortedInvestments = filteredInvestments
+      .filter(inv => inv && inv.buy_price && inv.current_value && inv.amount && inv.buy_date)
+      .sort((a, b) => {
+        const dateA = new Date(a.buy_date).getTime()
+        const dateB = new Date(b.buy_date).getTime()
+        return dateA - dateB
+      })
+
+    console.log('ProfitChart - sortedInvestments:', sortedInvestments)
+
+    // Calculate totals with extensive validation
+    const totals = sortedInvestments.reduce((acc, inv) => {
+      const buyPrice = Number(inv.buy_price) || 0
+      const currentValue = Number(inv.current_value) || 0
+      const amount = Number(inv.amount) || 0
+      
+      if (isNaN(buyPrice) || isNaN(currentValue) || isNaN(amount)) {
+        console.log('Invalid investment data:', { buyPrice, currentValue, amount })
+        return acc
+      }
+      
+      const buyValue = buyPrice * amount
+      const currentVal = currentValue * amount
+      
+      console.log(`Investment ${inv.currency}: buyValue=${buyValue}, currentVal=${currentVal}, amount=${amount}`)
+      
+      acc.totalInvestment += buyValue
+      acc.currentValue += currentVal
+      acc.profit += (currentVal - buyValue)
+      
+      return acc
+    }, {
+      totalInvestment: 0,
+      currentValue: 0,
+      totalProfit: 0,
+      profitPercentage: 0
+    })
+
+    console.log('ProfitChart - calculated totals:', totals)
+
+    const { totalInvestment, currentValue, totalProfit } = totals
+
+    // Calculate max value for scaling
+    const allValues = sortedInvestments.map(inv => ({
+      buyValue: (Number(inv.buy_price) || 0) * (Number(inv.amount) || 0),
+      currentValue: (Number(inv.current_value) || 0) * (Number(inv.amount) || 0)
+    }))
+
+    const maxValue = Math.max(...allValues, 1)
+
+    console.log('ProfitChart - maxValue:', maxValue)
+
+    if (maxValue <= 0 || isNaN(maxValue)) {
+      console.log('Invalid maxValue, using fallback')
+      return {
+        investments: sortedInvestments,
+        totalInvestment: 0,
+        currentValue: 0,
+        totalProfit: 0,
+        profitPercentage: 0
+      }
+    }
+
     const profitPercentage = totalInvestment > 0 ? (totalProfit / totalInvestment) * 100 : 0
 
     return {
@@ -47,225 +117,163 @@ export function ProfitChart({ investments, selectedCurrency }: ProfitChartProps)
     }
   }, [investments, selectedCurrency])
 
-  if (chartData.investments.length === 0) {
+  // Render chart only if we have valid data
+  if (!chartData || !chartData.investments || chartData.investments.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center text-center">
-        <div className="w-32 h-32 border-4 border-dashed border-gray-300 rounded-lg flex items-center justify-center mb-4">
-          <span className="text-gray-500 text-sm">Veri Yok</span>
+      <div className="flex flex-col items-center justify-center text-center p-8">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold mb-2">Grafik Verisi Bulunamadı</h3>
+          <p className="text-muted-foreground">
+            {selectedCurrency === 'all' ? 'Henüz yatırım verisi bulunmuyor' : `${selectedCurrency} için yatırım verisi bulunmuyor`}
+          </p>
         </div>
-        <p className="text-muted-foreground">
-          {selectedCurrency === 'all' ? 'Henüz yatırım verisi bulunmuyor' : `${selectedCurrency} için yatırım verisi bulunmuyor`}
-        </p>
       </div>
     )
   }
 
-  // Create bar chart data
-  const maxValue = Math.max(
-    chartData.totalInvestment,
-    chartData.currentValue,
-    ...chartData.investments.map(inv => inv.amount * inv.buyPrice),
-    ...chartData.investments.map(inv => inv.amount * inv.currentValue)
-  )
-
   const chartHeight = 300
   const chartWidth = 600
-  const barWidth = Math.min(60, (chartWidth - 100) / chartData.investments.length - 10)
-  const scale = (chartHeight - 60) / maxValue
+  const scale = maxValue > 0 ? (chartHeight - 60) / maxValue : 0
 
   return (
     <div className="w-full space-y-6">
+      <h3 className="font-semibold text-lg mb-4">Yatırım Kar/Zarar Analizi</h3>
+      
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="text-center p-4 border rounded-lg">
           <div className="text-2xl font-bold text-blue-600">
-            ₺{chartData.totalInvestment.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ₺{totalInvestment.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div className="text-sm text-muted-foreground">Toplam Yatırım</div>
         </div>
         
         <div className="text-center p-4 border rounded-lg">
           <div className="text-2xl font-bold text-green-600">
-            ₺{chartData.currentValue.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ₺{currentValue.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div className="text-sm text-muted-foreground">Mevcut Değer</div>
         </div>
         
         <div className="text-center p-4 border rounded-lg">
-          <div className={`text-2xl font-bold ${chartData.totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {chartData.totalProfit >= 0 ? '+' : ''}₺{chartData.totalProfit.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <div className={`text-2xl font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {totalProfit >= 0 ? '+' : ''}₺{totalProfit.toLocaleString('tr-RT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div className="text-sm text-muted-foreground">
-            Kar/Zarar ({chartData.profitPercentage >= 0 ? '+' : ''}{chartData.profitPercentage.toFixed(2)}%)
+            Kar/Zarar ({profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(2)}%)
           </div>
         </div>
       </div>
 
-      {/* Bar Chart */}
-      <div className="w-full overflow-x-auto">
-        <div className="min-w-[650px]">
-          <h3 className="font-semibold text-lg mb-4">Yatırım Kar/Zarar Analizi</h3>
-          
-          <svg width={chartWidth} height={chartHeight} className="w-full">
-            {/* Grid lines */}
-            {[0, 25, 50, 75, 100].map((percent) => {
-              const y = chartHeight - 30 - ((percent || 0) * scale * maxValue / 100)
-              return (
-                <g key={percent}>
-                  <line
-                    x1={50}
-                    y1={y}
-                    x2={chartWidth - 50}
-                    y2={y}
-                    stroke="#e5e7eb"
-                    strokeDasharray="2,2"
-                  />
-                  <text
-                    x={40}
-                    y={y + 5}
-                    textAnchor="end"
-                    fontSize="12"
-                    fill="#6b7280"
-                  >
-                    ₺{((maxValue * (percent || 0)) / 100).toFixed(0)}
-                  </text>
-                </g>
-              )
-            })}
-
-            {/* Bars */}
-            {chartData.investments.map((investment, index) => {
-              const buyValue = investment.amount * investment.buy_price
-              const currentValue = investment.amount * investment.current_value
-              const profit = currentValue - buyValue
-              
-              const buyHeight = buyValue * scale
-              const currentHeight = currentValue * scale
-              const profitHeight = Math.abs(profit) * scale
-              
-              const x = 60 + index * (barWidth + 10)
-              const buyY = chartHeight - 30 - buyHeight
-              const currentY = chartHeight - 30 - currentHeight
-              
-              return (
-                <g key={investment.id}>
-                  {/* Buy value bar */}
-                  <rect
-                    x={x}
-                    y={buyY}
-                    width={barWidth}
-                    height={buyHeight}
-                    fill="#3b82f6"
-                    opacity={0.7}
-                  />
-                  
-                  {/* Current value bar */}
-                  <rect
-                    x={x + barWidth / 3}
-                    y={currentY}
-                    width={barWidth / 3}
-                    height={currentHeight}
-                    fill={profit >= 0 ? '#10b981' : '#ef4444'}
-                    opacity={0.8}
-                  />
-                  
-                  {/* Profit/Loss indicator */}
-                  {profit !== 0 && (
-                    <rect
-                      x={x + barWidth * 2/3}
-                      y={chartHeight - 30 - Math.max(buyHeight, currentHeight) - 20}
-                      width={barWidth / 3}
-                      height={20}
-                      fill={profit >= 0 ? '#10b981' : '#ef4444'}
-                    />
-                  )}
-                  
-                  {/* Labels */}
-                  <text
-                    x={x + barWidth / 2}
-                    y={chartHeight - 10}
-                    textAnchor="middle"
-                    fontSize="12"
-                    fill="#374151"
-                  >
-                    {investment.currency}
-                  </text>
-                  
-                  <text
-                    x={x + barWidth / 2}
-                    y={buyY - 5}
-                    textAnchor="middle"
-                    fontSize="10"
-                    fill="#3b82f6"
-                  >
-                    ₺{buyValue.toFixed(0)}
-                  </text>
-                  
-                  <text
-                    x={x + barWidth / 2}
-                    y={currentY - 5}
-                    textAnchor="middle"
-                    fontSize="10"
-                    fill={profit >= 0 ? '#10b981' : '#ef4444'}
-                  >
-                    ₺{currentValue.toFixed(0)}
-                  </text>
-                  
-                  {profit !== 0 && (
-                    <text
-                      x={x + barWidth / 2}
-                      y={chartHeight - 30 - Math.max(buyHeight, currentHeight) - 25}
-                      textAnchor="middle"
-                      fontSize="10"
-                      fill="white"
-                      fontWeight="bold"
-                    >
-                      {profit >= 0 ? '+' : ''}{profit.toFixed(0)}
-                    </text>
-                  )}
-                </g>
-              )
-            })}
+      {/* Chart */}
+      <div className="bg-white p-4 rounded-lg border">
+        <svg width={chartWidth} height={chartHeight} className="w-full">
+          {/* Grid lines */}
+          {[0, 25, 50, 75, 100].map((percent) => {
+            const y = chartHeight - 30 - ((percent || 0) * scale * maxValue / 100)
+            const yValue = Math.max(0, chartHeight - 30 - ((percent || 0) * scale * maxValue / 100))
             
-            {/* Zero line */}
-            <line
-              x1={50}
-              y1={chartHeight - 30}
-              x2={chartWidth - 50}
-              y2={chartHeight - 30}
-              stroke="#374151"
-              strokeWidth="2"
-            />
-          </svg>
+            return (
+              <g key={percent}>
+                <line
+                  x1={50}
+                  y1={y}
+                  x2={chartWidth - 50}
+                  y2={y}
+                  stroke="#e5e7eb"
+                  strokeDasharray="2,2"
+                />
+                <text
+                  x={40}
+                  y={yValue - 5}
+                  textAnchor="end"
+                  fontSize="12"
+                  fill="#6b7280"
+                >
+                  {percent}%
+                </text>
+              </g>
+            )
+          })}
           
-          {/* Legend */}
-          <div className="flex justify-center gap-6 mt-4">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-blue-500 opacity-70 rounded"></div>
-              <span className="text-sm">Alış Değeri</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-green-500 opacity-80 rounded"></div>
-              <span className="text-sm">Mevcut Değer</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-green-500 rounded"></div>
-              <span className="text-sm">Kar</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-red-500 rounded"></div>
-              <span className="text-sm">Zarar</span>
-            </div>
-          </div>
-        </div>
+          {/* Bars */}
+          {chartData.investments.map((investment, index) => {
+            const buyValue = (Number(investment.buy_price) || 0) * (Number(investment.amount) || 0)
+            const currentValue = (Number(investment.current_value) || 0) * (Number(investment.amount) || 0)
+            const profit = currentValue - buyValue
+            const profitHeight = Math.abs(profit) * scale
+            
+            const x = 60 + index * 70
+            const buyHeight = buyValue * scale
+            const currentHeight = currentValue * scale
+            
+            return (
+              <g key={investment.id}>
+                {/* Buy value bar */}
+                <rect
+                  x={x}
+                  y={chartHeight - 30 - buyHeight}
+                  width={50}
+                  height={buyHeight}
+                  fill="#3b82f6"
+                  opacity={0.7}
+                />
+                
+                {/* Current value bar */}
+                <rect
+                  x={x + 20}
+                  y={chartHeight - 30 - currentHeight}
+                  width={50}
+                  height={currentHeight}
+                  fill={profit >= 0 ? '#10b981' : '#ef4444'}
+                  opacity={0.8}
+                />
+                
+                {/* Profit/Loss indicator */}
+                {profit !== 0 && (
+                  <rect
+                    x={x + 35}
+                    y={chartHeight - 30 - profitHeight - 5}
+                    width={30}
+                    height={5}
+                    fill={profit >= 0 ? '#10b981' : '#ef4444'}
+                  />
+                )}
+                
+                {/* Investment info */}
+                <text
+                  x={x + 25}
+                  y={chartHeight - 15}
+                  textAnchor="middle"
+                  fontSize="10"
+                  fill="#374151"
+                >
+                  {investment.currency}
+                </text>
+                
+                {/* Profit/Loss text */}
+                <text
+                  x={x + 25}
+                  y={chartHeight - 30}
+                  textAnchor="middle"
+                  fontSize="12"
+                  fontWeight="bold"
+                  fill={profit >= 0 ? '#10b981' : '#ef4444'}
+                >
+                  {profit >= 0 ? '+' : ''}₺{profit.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </text>
+              </g>
+            )
+          })}
+        </svg>
       </div>
 
       {/* Investment Details */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <h3 className="font-semibold text-lg">Yatırım Detayları</h3>
         {chartData.investments.map((investment) => {
-          const buyValue = investment.amount * investment.buy_price
-          const currentValue = investment.amount * investment.current_value
+          const buyValue = (Number(investment.buy_price) || 0) * (Number(investment.amount) || 0)
+          const currentValue = (Number(investment.current_value) || 0) * (Number(investment.amount) || 0)
           const profit = currentValue - buyValue
           const profitPercentage = buyValue > 0 ? (profit / buyValue) * 100 : 0
           
