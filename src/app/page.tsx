@@ -138,7 +138,7 @@ export default function HomePage() {
             <div className="flex justify-center mb-12">
               <img 
                 src="/favicon.png" 
-                alt="CepFinans Logo" 
+                alt="ButcApp Logo" 
                 className="w-20 h-20 rounded-2xl shadow-sm"
               />
             </div>
@@ -417,7 +417,7 @@ export default function HomePage() {
               <PiggyBank className="w-5 h-5 text-white" />
             </div>
             <span className="text-2xl font-bold text-gray-900 dark:text-white">
-              CepFinans
+              ButcApp
             </span>
           </div>
           <p className="text-gray-600 dark:text-gray-400 mb-6">

@@ -1,4 +1,4 @@
--- CepFinans Supabase Database Schema
+-- ButcApp Supabase Database Schema
 -- Bu script'i Supabase SQL Editor'da çalıştırın
 
 -- 1. Profiles Table (Kullanıcı profilleri)

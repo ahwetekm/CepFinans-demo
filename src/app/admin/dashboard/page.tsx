@@ -139,12 +139,12 @@ export default function AdminDashboard() {
             <div className="flex items-center">
               <img 
                 src="/favicon.png" 
-                alt="CepFinans Logo" 
+                alt="ButcApp Logo" 
                 className="w-8 h-8 rounded-lg shadow-sm mr-3"
               />
               <div>
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                  CepFinans Admin
+                  ButcApp Admin
                 </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Yönetim Paneli
@@ -183,7 +183,7 @@ export default function AdminDashboard() {
             Hoş Geldiniz, {admin?.name || admin?.username}!
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            CepFinans yönetim paneline hoş geldiniz. Sistem durumunu aşağıdan takip edebilirsiniz.
+            ButcApp yönetim paneline hoş geldiniz. Sistem durumunu aşağıdan takip edebilirsiniz.
           </p>
         </div>
 

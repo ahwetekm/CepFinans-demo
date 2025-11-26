@@ -8,25 +8,25 @@ import PageTransition from "@/components/page-transition";
 
 // Meta bilgileri
 export const metadata: Metadata = {
-  title: "CepFinans - Kişisel Muhasebe",
+  title: "ButcApp - Kişisel Muhasebe",
   description: "Nakit, birikim ve banka hesabınızı takip edin. Kişisel muhasebe uygulaması.",
-  keywords: ["CepFinans", "muhasebe", "finans", "bütçe", "kişisel finans"],
-  authors: [{ name: "CepFinans Team" }],
+  keywords: ["ButcApp", "muhasebe", "finans", "bütçe", "kişisel finans"],
+  authors: [{ name: "ButcApp Team" }],
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon-16x16.png",
     apple: "/favicon.png",
   },
   openGraph: {
-    title: "CepFinans - Kişisel Muhasebe",
+    title: "ButcApp - Kişisel Muhasebe",
     description: "Nakit, birikim ve banka hesabınızı takip edin",
     url: "https://chat.z.ai",
-    siteName: "CepFinans",
+    siteName: "ButcApp",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "CepFinans - Kişisel Muhasebe",
+    title: "ButcApp - Kişisel Muhasebe",
     description: "Nakit, birikim ve banka hesabınızı takip edin",
   },
 };

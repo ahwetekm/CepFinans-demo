@@ -71,13 +71,13 @@ export default function AdminLoginPage() {
           <div className="mx-auto mb-4">
             <img 
               src="/favicon.png" 
-              alt="CepFinans Logo" 
+              alt="ButcApp Logo" 
               className="w-16 h-16 rounded-2xl shadow-sm mx-auto"
             />
           </div>
           <CardTitle className="text-2xl font-bold">Admin Paneli</CardTitle>
           <CardDescription>
-            CepFinans yönetim paneline hoş geldiniz
+            ButcApp yönetim paneline hoş geldiniz
           </CardDescription>
         </CardHeader>
         <CardContent>

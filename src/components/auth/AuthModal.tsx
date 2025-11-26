@@ -103,7 +103,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'signin' }: AuthModalP
             {t('auth.welcome') || 'Hoş Geldiniz'}
           </CardTitle>
           <CardDescription className="text-center">
-            {t('auth.description') || 'CepFinans hesabınıza giriş yapın veya yeni hesap oluşturun'}
+            {t('auth.description') || 'ButcApp hesabınıza giriş yapın veya yeni hesap oluşturun'}
           </CardDescription>
         </CardHeader>
         <CardContent>

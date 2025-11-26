@@ -16,7 +16,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 const translations: Record<Language, Record<string, string>> = {
   tr: {
     // Ana Sayfa
-    'home.title': 'CepFinans',
+    'home.title': 'ButcApp',
     'home.subtitle': 'Kişisel Muhasebenizi Tek Yerden Kontrol Edin.',
     'home.start': 'Başla',
     'home.sourceCode': 'Kaynak Kodları',
@@ -42,11 +42,11 @@ const translations: Record<Language, Record<string, string>> = {
     'stats.simple': 'Basit',
     
     // Nasıl Kullanılır Modal
-    'guide.title': 'CepFinans Nasıl Kullanılır?',
+    'guide.title': 'ButcApp Nasıl Kullanılır?',
     'guide.quickStart': 'Hızlı Başlangıç',
-    'guide.quickStartDesc': 'CepFinans\'ı kullanmaya başlamak için herhangi bir üyelik veya kayıt işlemi gerekmez. Ana sayfadaki "Başla" butonuna tıklayarak doğrudan uygulamaya erişebilirsiniz. Tüm verileriniz tarayıcınızda güvenli bir şekilde saklanır.',
+    'guide.quickStartDesc': 'ButcApp\'ı kullanmaya başlamak için herhangi bir üyelik veya kayıt işlemi gerekmez. Ana sayfadaki "Başla" butonuna tıklayarak doğrudan uygulamaya erişebilirsiniz. Tüm verileriniz tarayıcınızda güvenli bir şekilde saklanır.',
     'guide.accountManagement': 'Hesap Yönetimi',
-    'guide.accountManagementDesc': 'CepFinans\'ta üç farklı hesap türü bulunur:',
+    'guide.accountManagementDesc': 'ButcApp\'ta üç farklı hesap türü bulunur:',
     'guide.cashAccount': 'Nakit Hesabı',
     'guide.cashAccountDesc': 'Cüzdanınızda veya evde bulunan nakit paranızı takip edin. Alışveriş, fatura ödemeleri gibi nakit işlemlerini buradan kaydedin.',
     'guide.bankAccount': 'Banka Hesabı',
@@ -62,7 +62,7 @@ const translations: Record<Language, Record<string, string>> = {
     'guide.addingTransfer': 'Transfer İşlemi',
     'guide.addingTransferDesc': 'Hesaplar arasında para transferi yapın. Nakitten bankaya, bankadan birikime gibi kolayca transfer gerçekleştirin.',
     'guide.autoTransactionsTitle': 'Otomatik İşlemler',
-    'guide.autoTransactionsDesc': 'Düzenli tekrar eden işlemleri otomatikleştirin. Aylık maaşınız, kira ödemeniz, kredi taksitleri, fatura ödemeleri gibi düzenli işlemleri bir kez tanımlayın ve CepFinans otomatik olarak kaydetsin. Bu sayede her ay aynı işlemleri tekrar tekrar girmek zorunda kalmazsınız.',
+    'guide.autoTransactionsDesc': 'Düzenli tekrar eden işlemleri otomatikleştirin. Aylık maaşınız, kira ödemeniz, kredi taksitleri, fatura ödemeleri gibi düzenli işlemleri bir kez tanımlayın ve ButcApp otomatik olarak kaydetsin. Bu sayede her ay aynı işlemleri tekrar tekrar girmek zorunda kalmazsınız.',
     'guide.reporting': 'Raporlama ve Analiz',
     'guide.reportingDesc': 'Finansal durumunuzu detaylı olarak analiz edin. Aylık gelir-gider dengenizi görüntüleyin, kategori bazında harcama alışkanlıklarınızı analiz edin, birikim hedeflerinize ne kadar ulaştığınızı takip edin. Grafikler ve tablolar sayesinde finansal sağlığınızı tek bakışta anlayın.',
     'guide.dataSecurity': 'Veri Güvenliği ve Yedekleme',
@@ -80,11 +80,11 @@ const translations: Record<Language, Record<string, string>> = {
     'cta.title': 'Finansal Geleceğinizi Bugün Yönetmeye Başlayın',
     'cta.subtitle': 'Üstelik Tamamen Ücretsiz Ve Açık Kaynak Kodlu',
     'cta.freeStart': 'Ücretsiz Başla',
-    'footer.copyright': '© 2025 CepFinans. Modern kişisel muhasebe.',
+    'footer.copyright': '© 2025 ButcApp. Modern kişisel muhasebe.',
     
     // Authentication
     'auth.welcome': 'Hoş Geldiniz',
-    'auth.description': 'CepFinans hesabınıza giriş yapın veya yeni hesap oluşturun',
+    'auth.description': 'ButcApp hesabınıza giriş yapın veya yeni hesap oluşturun',
     'auth.signIn': 'Giriş Yap',
     'auth.signUp': 'Kayıt Ol',
     'auth.signOut': 'Çıkış Yap',
@@ -113,7 +113,7 @@ const translations: Record<Language, Record<string, string>> = {
     'auth.passwordTooShort': 'Şifre en az 6 karakter olmalıdır',
 
     // App
-    'app.title': 'CepFinans',
+    'app.title': 'ButcApp',
     'app.modernPersonalFinance': 'Modern Kişisel Finans',
     'app.settings': 'Ayarlar',
     'app.manageData': 'Veri Yönetimi',
@@ -155,7 +155,7 @@ const translations: Record<Language, Record<string, string>> = {
     'app.newNote': 'Yeni Not',
     'app.cancel': 'İptal',
     'app.saveNoteButton': 'Notu Kaydet',
-    'app.footer': '© 2025 CepFinans. Modern kişisel finans yönetimi.',
+    'app.footer': '© 2025 ButcApp. Modern kişisel finans yönetimi.',
     'app.initialSetup': 'İlk Kurulum',
     'app.initialSetupDesc': 'Başlamak için hesap bakiyelerinizi girin',
     'app.insufficientBalance': 'Yetersiz bakiye',
@@ -189,7 +189,7 @@ const translations: Record<Language, Record<string, string>> = {
   },
   en: {
     // Home Page
-    'home.title': 'CepFinans',
+    'home.title': 'ButcApp',
     'home.subtitle': 'Manage Your Personal Finances in One Place.',
     'home.start': 'Get Started',
     'home.sourceCode': 'Source Code',
@@ -215,11 +215,11 @@ const translations: Record<Language, Record<string, string>> = {
     'stats.simple': 'Simple',
     
     // How to Use Modal
-    'guide.title': 'How to Use CepFinans?',
+    'guide.title': 'How to Use ButcApp?',
     'guide.quickStart': 'Quick Start',
-    'guide.quickStartDesc': 'You don\'t need any membership or registration to start using CepFinans.',
+    'guide.quickStartDesc': 'You don\'t need any membership or registration to start using ButcApp.',
     'guide.accountManagement': 'Account Management',
-    'guide.accountManagementDesc': 'CepFinans has three different account types:',
+    'guide.accountManagementDesc': 'ButcApp has three different account types:',
     'guide.cashAccount': 'Cash Account',
     'guide.cashAccountDesc': 'Track your cash in your wallet or at home.',
     'guide.bankAccount': 'Bank Account',
@@ -257,11 +257,11 @@ const translations: Record<Language, Record<string, string>> = {
     'cta.freeStart': 'Get Started Free',
     
     // Footer
-    'footer.copyright': '© 2025 CepFinans. Modern personal finance.',
+    'footer.copyright': '© 2025 ButcApp. Modern personal finance.',
     
     // Authentication
-    'auth.welcome': 'Welcome to CepFinans',
-    'auth.description': 'Sign in to your CepFinans account or create a new account',
+    'auth.welcome': 'Welcome to ButcApp',
+    'auth.description': 'Sign in to your ButcApp account or create a new account',
     'auth.signIn': 'Sign In',
     'auth.signUp': 'Sign Up',
     'auth.signOut': 'Sign Out',
@@ -290,7 +290,7 @@ const translations: Record<Language, Record<string, string>> = {
     'auth.passwordTooShort': 'Password must be at least 6 characters',
 
     // App
-    'app.title': 'CepFinans',
+    'app.title': 'ButcApp',
     'app.modernPersonalFinance': 'Modern Personal Finance',
     'app.settings': 'Settings',
     'app.manageData': 'Data Management',
@@ -332,7 +332,7 @@ const translations: Record<Language, Record<string, string>> = {
     'app.newNote': 'New Note',
     'app.cancel': 'Cancel',
     'app.saveNoteButton': 'Save Note',
-    'app.footer': '© 2025 CepFinans. Modern personal finance management.',
+    'app.footer': '© 2025 ButcApp. Modern personal finance management.',
     'app.initialSetup': 'Initial Setup',
     'app.initialSetupDesc': 'Enter your account balances to get started',
     'app.insufficientBalance': 'Insufficient balance',

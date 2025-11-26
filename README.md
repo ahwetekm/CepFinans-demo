@@ -1,24 +1,24 @@
 # <div align="center">
-  <img src="public/logo.png" alt="CepFinans Logo" width="120" height="120">
+  <img src="public/logo.png" alt="ButcApp Logo" width="120" height="120">
 </div>
 
-<h1 align="center">CepFinans</h1>
+<h1 align="center">ButcApp</h1>
 <p align="center">
   <strong>Modern Kişisel Muhasebe Uygulaması</strong>
 </p>
 
 <p align="center">
-  <a href="https://github.com/ahwetekm/CepFinans/stargazers">
-    <img src="https://img.shields.io/github/stars/ahwetekm/CepFinans?style=for-the-badge&color=10b981" alt="Stars">
+  <a href="https://github.com/ahwetekm/ButcApp/stargazers">
+    <img src="https://img.shields.io/github/stars/ahwetekm/ButcApp?style=for-the-badge&color=10b981" alt="Stars">
   </a>
-  <a href="https://github.com/ahwetekm/CepFinans/network/members">
-    <img src="https://img.shields.io/github/forks/ahwetekm/CepFinans?style=for-the-badge&color=3b82f6" alt="Forks">
+  <a href="https://github.com/ahwetekm/ButcApp/network/members">
+    <img src="https://img.shields.io/github/forks/ahwetekm/ButcApp?style=for-the-badge&color=3b82f6" alt="Forks">
   </a>
-  <a href="https://github.com/ahwetekm/CepFinans/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/ahwetekm/CepFinans?style=for-the-badge&color=8b5cf6" alt="License">
+  <a href="https://github.com/ahwetekm/ButcApp/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/ahwetekm/ButcApp?style=for-the-badge&color=8b5cf6" alt="License">
   </a>
-  <a href="https://github.com/ahwetekm/CepFinans/issues">
-    <img src="https://img.shields.io/github/issues/ahwetekm/CepFinans?style=for-the-badge&color=ef4444" alt="Issues">
+  <a href="https://github.com/ahwetekm/ButcApp/issues">
+    <img src="https://img.shields.io/github/issues/ahwetekm/ButcApp?style=for-the-badge&color=ef4444" alt="Issues">
   </a>
 </p>
 
@@ -28,7 +28,7 @@
 
 ## 📖 Hakkında
 
-CepFinans, kişisel finans yönetimini basitleştiren modern ve kullanıcı dostu bir web uygulamasıdır. Karmaşık arayüzlerden sıkılan kullanıcılar için tasarlanan CepFinans, tüm finansal işlemlerinizi tek bir yerden yönetmenizi sağlar.
+ButcApp, kişisel finans yönetimini basitleştiren modern ve kullanıcı dostu bir web uygulamasıdır. Karmaşık arayüzlerden sıkılan kullanıcılar için tasarlanan ButcApp, tüm finansal işlemlerinizi tek bir yerden yönetmenizi sağlar.
 
 ### 🎯 Misyonumuz
 
@@ -79,8 +79,8 @@ Kişisel finans yönetimini herkes için erişilebilir, anlaşılır ve keyifli 
 ### Adım 1: Projeyi Klonlayın
 
 ```bash
-git clone https://github.com/ahwetekm/CepFinans.git
-cd CepFinans
+git clone https://github.com/ahwetekm/ButcApp.git
+cd ButcApp
 ```
 
 ### Adım 2: Bağımlılıkları Yükleyin
@@ -123,7 +123,7 @@ npm start
 
 ## 📊 Grafik ve İstatistik Özellikleri
 
-CepFinans, finansal verilerinizi görselleştirmek için zengin grafik seçenekleri sunar:
+ButcApp, finansal verilerinizi görselleştirmek için zengin grafik seçenekleri sunar:
 
 ### 🥧 Hesap Dağılımı (Pasta Grafiği)
 - Nakit, banka ve birikim hesaplarınızın dağılımını gösterir
@@ -271,9 +271,9 @@ Bu proje MIT Lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICE
 ### 📞 İletişim Kanalları
 - **İletişim Formu**: Site üzerinden doğrudan mesaj gönderin
 - **E-posta**: [ahwetze@proton.me](mailto:ahwetze@proton.me)
-- **Proje Linki**: [https://github.com/ahwetekm/CepFinans](https://github.com/ahwetekm/CepFinans)
-- **Issues**: [https://github.com/ahwetekm/CepFinans/issues](https://github.com/ahwetekm/CepFinans/issues)
-- **Discussions**: [https://github.com/ahwetekm/CepFinans/discussions](https://github.com/ahwetekm/CepFinans/discussions)
+- **Proje Linki**: [https://github.com/ahwetekm/ButcApp](https://github.com/ahwetekm/ButcApp)
+- **Issues**: [https://github.com/ahwetekm/ButcApp/issues](https://github.com/ahwetekm/ButcApp/issues)
+- **Discussions**: [https://github.com/ahwetekm/ButcApp/discussions](https://github.com/ahwetekm/ButcApp/discussions)
 
 ### İletişim Formu Ekran Görüntüsü
 <div align="center">

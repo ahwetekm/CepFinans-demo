@@ -63,7 +63,7 @@ interface Note {
   tags?: string[]
 }
 
-export default function CepFinansApp() {
+export default function ButcAppApp() {
   const { t } = useLanguage()
   const { user } = useAuth()
   const [balances, setBalances] = useState<AccountBalances>({ cash: 0, bank: 0, savings: 0 })
@@ -1304,7 +1304,7 @@ export default function CepFinansApp() {
               <PiggyBank className="w-5 h-5 text-white" />
             </div>
             <span className="text-2xl font-bold text-gray-900 dark:text-white">
-              CepFinans
+              ButcApp
             </span>
           </div>
           <p className="text-gray-600 dark:text-gray-400">
