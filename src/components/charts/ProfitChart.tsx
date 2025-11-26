@@ -96,7 +96,8 @@ export function ProfitChart({ investments, selectedCurrency }: ProfitChartProps)
       }
       
       const buyValue = buyPrice * amount
-      const currentVal = currentValue * amount
+      // currentValue zaten tekil yatırımın toplam mevcut değeri, tekrar çarpma yok!
+      const currentVal = currentValue
       
       acc.totalInvestment += buyValue
       acc.currentValue += currentVal
@@ -273,7 +274,8 @@ export function ProfitChart({ investments, selectedCurrency }: ProfitChartProps)
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {investmentData.map((investment) => {
             const buyValue = (Number(investment.buy_price) || 0) * (Number(investment.amount) || 0)
-            const currentValue = (Number(investment.current_value) || 0) * (Number(investment.amount) || 0)
+            // currentValue zaten tekil yatırımın toplam mevcut değeri, tekrar çarpma yok!
+            const currentValue = Number(investment.current_value) || 0
             const profit = currentValue - buyValue
             const profitPercentage = buyValue > 0 ? (profit / buyValue) * 100 : 0
             const gradient = getCurrencyGradient(investment.currency)
