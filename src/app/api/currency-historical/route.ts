@@ -1,5 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Türkiye resmi tatil günleri (2025 yılı için)
+const TURKISH_HOLIDAYS_2025 = [
+  { date: '2025-01-01', name: 'Yilbaşı' },
+  { date: '2025-04-23', name: 'Ramazan Bayrami 1. Gunu' },
+  { date: '2025-04-24', name: 'Ramazan Bayrami 2. Gunu' },
+  { date: '2025-04-25', name: 'Ramazan Bayrami 3. Gunu' },
+  { date: '2025-05-01', name: 'Emek ve Dayanisma Gunu' },
+  { date: '2025-05-19', name: 'Genclik ve Spor Bayrami' },
+  { date: '2025-07-15', name: 'Demokrasi ve Milli Birlik Gunu' },
+  { date: '2025-08-30', name: 'Zafer Bayrami' },
+  { date: '2025-10-29', name: 'Cumhuriyet Bayrami' },
+  { date: '2025-11-10', name: 'Ataturku Anma Gunu' }
+]
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -9,6 +23,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: false,
         error: 'Date parameter is required'
+      }, { status: 400 })
+    }
+
+    // Check if the requested date is a holiday
+    const isHoliday = TURKISH_HOLIDAYS_2025.some(holiday => holiday.date === date)
+    
+    if (isHoliday) {
+      return NextResponse.json({
+        success: false,
+        error: 'Seçilen tarih resmi tatil günüdür. TCMB bu gün için veri yayınlamaz.',
+        holiday: TURKISH_HOLIDAYS_2025.find(h => h.date === date),
+        date: date,
+        timestamp: new Date().toISOString()
       }, { status: 400 })
     }
 

@@ -217,6 +217,23 @@ export default function InvestmentsPage() {
     }
   }
 
+  // Check if selected date is a holiday
+  const isDateHoliday = (date: string) => {
+    const holidays = [
+      '2025-01-01', // Yılbaşı
+      '2025-04-23', // Ramazan Bayramı 1. Günü
+      '2025-04-24', // Ramazan Bayramı 2. Günü
+      '2025-04-25', // Ramazan Bayramı 3. Günü
+      '2025-05-01', // Emek ve Dayanışma Günü
+      '2025-05-19', // Gençlik ve Spor Bayramı
+      '2025-07-15', // Demokrasi ve Milli Birlik Günü
+      '2025-08-30', // Zafer Bayramı
+      '2025-10-29', // Cumhuriyet Bayramı
+      '2025-11-10' // Atatürk'ü Anma Günü
+    ]
+    return holidays.includes(date)
+  }
+
   // Load more currencies
   const loadMoreCurrencies = () => {
     const newCount = visibleCount + 8
@@ -663,15 +680,27 @@ export default function InvestmentsPage() {
                   const newDate = e.target.value
                   setInvestmentForm(prev => ({ ...prev, date: newDate }))
                   
-                  // Fetch historical price for new date
-                  if (selectedCurrency && newDate !== new Date().toISOString().split('T')[0]) {
-                    fetchHistoricalPrice(newDate, selectedCurrency.symbol)
-                  } else {
+                  // Check if new date is a holiday
+                  if (isDateHoliday(newDate)) {
+                    // Clear historical price if date is a holiday
                     setHistoricalPrice(null)
+                  } else {
+                    // Fetch historical price for new date
+                    if (selectedCurrency && newDate !== new Date().toISOString().split('T')[0]) {
+                      fetchHistoricalPrice(newDate, selectedCurrency.symbol)
+                    } else {
+                      setHistoricalPrice(null)
+                    }
                   }
                 }}
                 max={new Date().toISOString().split('T')[0]}
+                className={isDateHoliday(investmentForm.date) ? 'border-red-500 focus:border-red-500' : ''}
               />
+              {isDateHoliday(investmentForm.date) && (
+                <p className="text-sm text-red-500 mt-1">
+                  ⚠️ Seçilen tarih resmi tatil günüdür. TCMB bu gün için veri yayınlamaz.
+                </p>
+              )}
             </div>
 
             <div>
