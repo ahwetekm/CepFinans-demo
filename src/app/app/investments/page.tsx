@@ -234,7 +234,14 @@ export default function InvestmentsPage() {
 
   // Create investment
   const createInvestment = async () => {
-    if (!selectedCurrency || investmentForm.amount <= 0 || !user) return
+    if (!selectedCurrency || investmentForm.amount <= 0 || !user) {
+      console.error('Missing required fields:', {
+        selectedCurrency: !!selectedCurrency,
+        amount: investmentForm.amount,
+        user: !!user
+      })
+      return
+    }
     
     setIsCreatingInvestment(true)
     try {
@@ -270,11 +277,23 @@ export default function InvestmentsPage() {
         })
         setHistoricalPrice(null)
         setSelectedCurrency(null)
+        
+        // Show success message (optional)
+        console.log('Investment created successfully')
       } else {
         console.error('Investment creation error:', result.error)
+        console.error('Error details:', result.details)
+        
+        // Show user-friendly error message
+        if (result.details?.includes('table')) {
+          alert('Veritabanı tablosu bulunamadı. Lütfen Supabase ayarlarınızı kontrol edin.')
+        } else {
+          alert(`Yatırım oluşturulamadı: ${result.error}`)
+        }
       }
     } catch (error) {
       console.error('Investment creation error:', error)
+      alert('Yatırım oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.')
     } finally {
       setIsCreatingInvestment(false)
     }
