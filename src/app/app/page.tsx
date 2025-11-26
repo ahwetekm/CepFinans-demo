@@ -695,6 +695,24 @@ export default function CepFinansApp() {
           </div>
         </header>
 
+        {/* Hotbar - Finans / Yatırımlar Geçişi */}
+        <div className="mb-8">
+          <Card className="bg-white dark:bg-gray-800 shadow-sm border">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-center space-x-4">
+                <Link href="/app" className="flex items-center space-x-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium">
+                  <DollarSign className="w-5 h-5" />
+                  <span>Finans</span>
+                </Link>
+                <Link href="/app/investments" className="flex items-center space-x-2 px-6 py-3 bg-muted hover:bg-muted/80 rounded-lg font-medium transition-colors">
+                  <TrendingUp className="w-5 h-5" />
+                  <span>Yatırımlar</span>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* İstatistik Kartları */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="bg-green-500/10 border-green-500/20 dark:bg-green-900/20 dark:border-green-800/30">
