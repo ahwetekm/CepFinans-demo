@@ -5,7 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { TrendingUp, TrendingDown, DollarSign, Bitcoin, Gem, ArrowUpRight, ArrowDownRight, Activity, BarChart3, RefreshCw, Clock, Star, AlertCircle } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { TrendingUp, TrendingDown, DollarSign, Bitcoin, Gem, ArrowUpRight, ArrowDownRight, Activity, BarChart3, RefreshCw, Clock, Star, AlertCircle, Plus, Calendar, Zap, Target, Wallet } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LanguageToggle } from '@/components/language-toggle'
 import { UserAuthButton } from '@/components/auth/UserAuthButton'
@@ -46,6 +50,25 @@ interface CommodityItem {
   icon: React.ReactNode
 }
 
+interface Investment {
+  id: string
+  currency: string
+  currencyName: string
+  amount: number
+  buyPrice: number
+  buyDate: string
+  currentValue: number
+  profit: number
+  profitPercent: number
+}
+
+interface InvestmentFormData {
+  currency: string
+  currencyName: string
+  amount: number
+  date: string
+}
+
 export default function InvestmentsPage() {
   const { t } = useLanguage()
   const [selectedTab, setSelectedTab] = useState('currency')
@@ -55,6 +78,20 @@ export default function InvestmentsPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [visibleCount, setVisibleCount] = useState(8)
   const [hasMore, setHasMore] = useState(true)
+  
+  // Investment states
+  const [showInvestmentDialog, setShowInvestmentDialog] = useState(false)
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyItem | null>(null)
+  const [investments, setInvestments] = useState<Investment[]>([])
+  const [investmentForm, setInvestmentForm] = useState<InvestmentFormData>({
+    currency: '',
+    currencyName: '',
+    amount: 0,
+    date: new Date().toISOString().split('T')[0]
+  })
+  const [isCreatingInvestment, setIsCreatingInvestment] = useState(false)
+  const [historicalPrice, setHistoricalPrice] = useState<number | null>(null)
+  const [isLoadingHistorical, setIsLoadingHistorical] = useState(false)
 
   // TCMB'den döviz verilerini çek
   const fetchCurrencyData = async () => {
@@ -103,6 +140,80 @@ export default function InvestmentsPage() {
       console.error('Döviz verileri çekilemedi:', error)
     } finally {
       setIsLoadingCurrency(false)
+    }
+  }
+
+  // Load historical price for investment
+  const fetchHistoricalPrice = async (date: string, currencyCode: string) => {
+    setIsLoadingHistorical(true)
+    try {
+      const response = await fetch(`/api/currency-historical?date=${date}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        const currency = result.data.find((c: any) => c.symbol === currencyCode)
+        if (currency) {
+          setHistoricalPrice(currency.price)
+        }
+      }
+    } catch (error) {
+      console.error('Historical price fetch error:', error)
+    } finally {
+      setIsLoadingHistorical(false)
+    }
+  }
+
+  // Create investment
+  const createInvestment = async () => {
+    if (!selectedCurrency || investmentForm.amount <= 0) return
+    
+    setIsCreatingInvestment(true)
+    try {
+      const buyPrice = historicalPrice || selectedCurrency.price
+      const investment: Investment = {
+        id: Date.now().toString(),
+        currency: selectedCurrency.symbol,
+        currencyName: selectedCurrency.name,
+        amount: investmentForm.amount,
+        buyPrice: buyPrice,
+        buyDate: investmentForm.date,
+        currentValue: selectedCurrency.price,
+        profit: (selectedCurrency.price - buyPrice) * investmentForm.amount,
+        profitPercent: ((selectedCurrency.price - buyPrice) / buyPrice) * 100
+      }
+      
+      setInvestments(prev => [investment, ...prev])
+      setShowInvestmentDialog(false)
+      setInvestmentForm({
+        currency: '',
+        currencyName: '',
+        amount: 0,
+        date: new Date().toISOString().split('T')[0]
+      })
+      setHistoricalPrice(null)
+      setSelectedCurrency(null)
+    } catch (error) {
+      console.error('Investment creation error:', error)
+    } finally {
+      setIsCreatingInvestment(false)
+    }
+  }
+
+  // Open investment dialog
+  const openInvestmentDialog = (currency: CurrencyItem) => {
+    setSelectedCurrency(currency)
+    setInvestmentForm(prev => ({
+      ...prev,
+      currency: currency.symbol,
+      currencyName: currency.name
+    }))
+    setShowInvestmentDialog(true)
+    
+    // Fetch historical price for the selected date
+    if (investmentForm.date !== new Date().toISOString().split('T')[0]) {
+      fetchHistoricalPrice(investmentForm.date, currency.symbol)
+    } else {
+      setHistoricalPrice(null)
     }
   }
 
@@ -295,6 +406,14 @@ export default function InvestmentsPage() {
                         {item.change >= 0 ? '+' : ''}{formatPrice(item.change)} ({item.changePercent >= 0 ? '+' : ''}{item.changePercent.toFixed(2)}%)
                       </span>
                     </div>
+                    <Button 
+                      size="sm" 
+                      className="mt-2"
+                      onClick={() => openInvestmentDialog(item)}
+                    >
+                      <Zap className="w-4 h-4 mr-1" />
+                      Hızlı Yatırım
+                    </Button>
                   </div>
                 </div>
               </Card>
@@ -498,6 +617,196 @@ export default function InvestmentsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Investment Dialog */}
+      <Dialog open={showInvestmentDialog} onOpenChange={setShowInvestmentDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Target className="w-5 h-5" />
+              Yatırım Yap
+            </DialogTitle>
+            <DialogDescription>
+              {selectedCurrency?.name} için yatırım işlemi oluşturun
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="currency">Döviz</Label>
+                <Input
+                  id="currency"
+                  value={selectedCurrency?.symbol || ''}
+                  readOnly
+                  className="bg-muted"
+                />
+              </div>
+              <div>
+                <Label htmlFor="currentPrice">Güncel Fiyat</Label>
+                <Input
+                  id="currentPrice"
+                  value={`₺${formatPrice(selectedCurrency?.price || 0)}`}
+                  readOnly
+                  className="bg-muted"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="date">Tarih</Label>
+              <Input
+                id="date"
+                type="date"
+                value={investmentForm.date}
+                onChange={(e) => {
+                  const newDate = e.target.value
+                  setInvestmentForm(prev => ({ ...prev, date: newDate }))
+                  
+                  // Fetch historical price for new date
+                  if (selectedCurrency && newDate !== new Date().toISOString().split('T')[0]) {
+                    fetchHistoricalPrice(newDate, selectedCurrency.symbol)
+                  } else {
+                    setHistoricalPrice(null)
+                  }
+                }}
+                max={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="amount">
+                İşlem Fiyatı
+                {isLoadingHistorical && (
+                  <span className="text-muted-foreground ml-2">(Yükleniyor...)</span>
+                )}
+              </Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                value={historicalPrice || selectedCurrency?.price || 0}
+                readOnly
+                className="bg-muted"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="investmentAmount">Yatırım Miktarı (TRY)</Label>
+              <Input
+                id="investmentAmount"
+                type="number"
+                step="0.01"
+                value={investmentForm.amount}
+                onChange={(e) => setInvestmentForm(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                placeholder="0.00"
+              />
+            </div>
+
+            {investmentForm.amount > 0 && (historicalPrice || selectedCurrency?.price) && (
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <div className="text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span>Toplam Yatırım:</span>
+                    <span className="font-medium">
+                      ₺{formatPrice(investmentForm.amount * (historicalPrice || selectedCurrency?.price || 0))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Alış Fiyatı:</span>
+                    <span className="font-medium">
+                      ₺{formatPrice(historicalPrice || selectedCurrency?.price || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Mevcut Değer:</span>
+                    <span className="font-medium">
+                      ₺{formatPrice(selectedCurrency?.price || 0)}
+                    </span>
+                  </div>
+                  {selectedCurrency?.price !== (historicalPrice || 0) && (
+                    <div className="flex justify-between">
+                      <span>Kar/Zarar:</span>
+                      <span className={`font-medium ${
+                        (selectedCurrency.price - (historicalPrice || 0)) >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {((selectedCurrency.price - (historicalPrice || 0)) >= 0 ? '+' : '')}₺{formatPrice((selectedCurrency.price - (historicalPrice || 0)) * investmentForm.amount)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowInvestmentDialog(false)}
+                disabled={isCreatingInvestment}
+              >
+                İptal
+              </Button>
+              <Button 
+                onClick={createInvestment}
+                disabled={isCreatingInvestment || !selectedCurrency || investmentForm.amount <= 0}
+              >
+                {isCreatingInvestment ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Oluşturuluyor...
+                  </div>
+                ) : (
+                  'Yatırım Yap'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Your Investments Section */}
+      {investments.length > 0 && (
+        <div className="container mx-auto px-4 py-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wallet className="w-5 h-5" />
+                Yatırımlarınız
+              </CardTitle>
+              <CardDescription>
+                Yaptığınız döviz yatırımlarınızın takibi
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {investments.map((investment) => (
+                  <div key={investment.id} className="p-4 border rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold">{investment.currency}</div>
+                        <div className="text-sm text-muted-foreground">{investment.currencyName}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Alış: {new Date(investment.buyDate).toLocaleDateString('tr-TR')}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold">
+                          ₺{formatPrice(investment.amount * investment.currentValue)}
+                        </div>
+                        <div className={`text-sm ${
+                          investment.profit >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {investment.profit >= 0 ? '+' : ''}₺{formatPrice(investment.profit)} ({investment.profitPercent >= 0 ? '+' : ''}{investment.profitPercent.toFixed(2)}%)
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
