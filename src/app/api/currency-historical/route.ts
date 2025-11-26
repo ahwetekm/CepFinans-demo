@@ -33,17 +33,6 @@ export async function GET(request: NextRequest) {
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
     const isHoliday = holidays.includes(date)
     
-    // If it's a holiday, return error message
-    if (isHoliday) {
-      return NextResponse.json({
-        success: false,
-        error: 'Seçilen tarih resmi tatil günüdür. TCMB bu gün için veri yayınlamaz.',
-        holiday: holidays.find(h => h === date),
-        date: date,
-        timestamp: new Date().toISOString()
-      }, { status: 400 })
-    }
-    
     // Function to find previous working day
     const findPreviousWorkingDay = (targetDate: string) => {
       const [year, month, day] = targetDate.split('-').map(Number)
@@ -72,14 +61,16 @@ export async function GET(request: NextRequest) {
         }
       }
     }
-
-    // If it's a weekend, automatically find previous working day and update date
+    
+    // If it's a weekend or holiday, automatically find previous working day and update date
     let actualDate = date
     let wasWeekend = false
+    let wasHoliday = false
     
-    if (isWeekend) {
+    if (isWeekend || isHoliday) {
       actualDate = findPreviousWorkingDay(date)
-      wasWeekend = true
+      wasWeekend = isWeekend
+      wasHoliday = isHoliday
     }
 
     // Convert date to TCMB format (DD.MM.YYYY)
@@ -234,9 +225,11 @@ export async function GET(request: NextRequest) {
       success: true,
       data: result,
       date: tcmbDate,
-      originalDate: wasWeekend ? date : undefined,
-      fallbackDate: wasWeekend,
-      message: wasWeekend ? `Seçilen tarih (${date}) hafta sonu olduğu için önceki çalışma günü (${actualDate}) verileri kullanılıyor.` : undefined,
+      originalDate: (wasWeekend || wasHoliday) ? date : undefined,
+      fallbackDate: wasWeekend || wasHoliday,
+      message: (wasWeekend || wasHoliday) ? 
+        `Seçilen tarih (${date}) ${wasHoliday ? 'resmi tatil' : 'hafta sonu'} olduğu için önceki çalışma günü (${actualDate}) verileri kullanılıyor.` : 
+        undefined,
       timestamp: new Date().toISOString()
     })
     
