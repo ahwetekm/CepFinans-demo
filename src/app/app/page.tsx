@@ -19,7 +19,6 @@ import { dataSync } from '@/lib/data-sync'
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts'
 import Link from 'next/link'
 import EditRecurringDialog from '@/components/EditRecurringDialog'
-import Head from 'next/head'
 
 interface Transaction {
   id: string
@@ -668,22 +667,7 @@ export default function ButcAppApp() {
   }
 
   return (
-    <>
-      <Head>
-        <title>ButcApp - Kişisel Finans Yönetimi Paneli</title>
-        <meta name="description" content="ButcApp kişisel finans paneli. Nakit, banka ve birikim hesaplarınızı yönetin. Bütçe takibi, yatırım analizi ve finansal raporlar." />
-        <meta name="keywords" content="kişisel finans, finans paneli, bütçe yönetimi, yatırım takibi, nakit yönetimi" />
-        <meta property="og:title" content="ButcApp - Finans Yönetim Paneli" />
-        <meta property="og:description" content="Modern kişisel finans yönetimi paneli. Tüm hesaplarınızı tek yerden yönetin." />
-        <meta property="og:url" content="https://butcapp.com/app" />
-        <meta property="og:image" content="https://butcapp.com/og-image.png" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="ButcApp - Finans Yönetim Paneli" />
-        <meta name="twitter:description" content="Modern kişisel finans yönetimi paneli." />
-        <meta name="twitter:image" content="https://butcapp.com/og-image.png" />
-      </Head>
-      
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="max-w-7xl mx-auto p-4 md:p-6 pb-32">
         {/* Header */}
         <header className="mb-8 flex justify-between items-start">
@@ -1514,7 +1498,6 @@ export default function ButcAppApp() {
         />
       )}
     </div>
-    </>
   )
 }
 
