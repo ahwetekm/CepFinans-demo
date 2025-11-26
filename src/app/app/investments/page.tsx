@@ -114,11 +114,16 @@ export default function InvestmentsPage() {
     const checkUser = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser()
-        setUser(user)
+        console.log('User data from Supabase:', user)
         
         if (user) {
+          console.log('User ID:', user.id)
+          console.log('User ID type:', typeof user.id)
           // Fetch user's investments
           fetchInvestments(user.id)
+        } else {
+          console.log('No user found')
+          setInvestments([])
         }
       } catch (error) {
         console.error('User check error:', error)
@@ -131,10 +136,13 @@ export default function InvestmentsPage() {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state changed:', { event: _event, session: session?.user?.id })
       setUser(session?.user || null)
       if (session?.user) {
+        console.log('Fetching investments for user:', session.user.id)
         fetchInvestments(session.user.id)
       } else {
+        console.log('No session, clearing investments')
         setInvestments([])
       }
       setIsLoadingUser(false)
@@ -147,10 +155,14 @@ export default function InvestmentsPage() {
   const fetchInvestments = async (userId: string) => {
     setIsLoadingInvestments(true)
     try {
+      console.log('Fetching investments for userId:', userId)
       const response = await fetch(`/api/investments?userId=${userId}`)
       const result = await response.json()
       
+      console.log('Investments API response:', result)
+      
       if (result.success) {
+        console.log('Investments data received:', result.data)
         setInvestments(result.data || [])
       } else {
         console.error('Failed to fetch investments:', result.error)
