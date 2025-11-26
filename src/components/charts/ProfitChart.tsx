@@ -109,7 +109,7 @@ export function ProfitChart({ investments, selectedCurrency }: ProfitChartProps)
           <svg width={chartWidth} height={chartHeight} className="w-full">
             {/* Grid lines */}
             {[0, 25, 50, 75, 100].map((percent) => {
-              const y = chartHeight - 30 - (percent * scale * maxValue / 100)
+              const y = chartHeight - 30 - ((percent || 0) * scale * maxValue / 100)
               return (
                 <g key={percent}>
                   <line
@@ -127,7 +127,7 @@ export function ProfitChart({ investments, selectedCurrency }: ProfitChartProps)
                     fontSize="12"
                     fill="#6b7280"
                   >
-                    ₺{(maxValue * percent / 100).toFixed(0)}
+                    ₺{((maxValue * (percent || 0)) / 100).toFixed(0)}
                   </text>
                 </g>
               )
