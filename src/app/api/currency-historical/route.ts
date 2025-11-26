@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Check if requested date is a holiday
+    // Check if requested date is a holiday or weekend
     const holidays = [
       '2025-01-01', // Yılbaşı
       '2025-04-23', // Ramazan Bayramı 1. Günü
@@ -25,48 +25,69 @@ export async function GET(request: NextRequest) {
       '2025-10-29', // Cumhuriyet Bayramı
       '2025-11-10'  // Atatürk'ü Anma Günü
     ]
+    
+    // Check if it's a weekend
+    const [year, month, day] = date.split('-').map(Number)
+    const checkDate = new Date(year, month - 1, day)
+    const dayOfWeek = checkDate.getDay() // 0 = Sunday, 6 = Saturday
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
     const isHoliday = holidays.includes(date)
     
+    // If it's a holiday, return error message
     if (isHoliday) {
       return NextResponse.json({
         success: false,
         error: 'Seçilen tarih resmi tatil günüdür. TCMB bu gün için veri yayınlamaz.',
-        holiday: holidays.find(h => h.date === date),
+        holiday: holidays.find(h => h === date),
         date: date,
         timestamp: new Date().toISOString()
       }, { status: 400 })
     }
-
+    
     // Function to find previous working day
     const findPreviousWorkingDay = (targetDate: string) => {
       const [year, month, day] = targetDate.split('-').map(Number)
-      const currentDate = new Date(year, month - 1, 0) // Previous month
-      const lastDayOfMonth = new Date(year, month, 0).getDate()
+      let checkDate = new Date(year, month - 1, day) // Start from the requested date
       
-      // Check if it's a weekend (Saturday = 6, Sunday = 0)
-      let checkDate = new Date(year, month, lastDayOfMonth)
+      // Go back one day first
+      checkDate.setDate(checkDate.getDate() - 1)
       
-      while (checkDate >= new Date(year, month, 1)) {
+      // Keep going back until we find a working day (not weekend and not holiday)
+      while (true) {
         const dayOfWeek = checkDate.getDay()
-        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not Sunday or Saturday
-          const checkDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`
-          if (!holidays.includes(checkDateStr)) {
-            return checkDateStr
-          }
+        const checkDateStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`
+        
+        // Check if it's a working day (not Sunday=0 and not Saturday=6) and not a holiday
+        if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidays.includes(checkDateStr)) {
+          return checkDateStr
         }
+        
+        // Go back one more day
         checkDate.setDate(checkDate.getDate() - 1)
+        
+        // Safety check: don't go back more than 30 days
+        const daysDiff = Math.floor((new Date(year, month - 1, day).getTime() - checkDate.getTime()) / (1000 * 60 * 60 * 24))
+        if (daysDiff > 30) {
+          return new Date().toISOString().split('T')[0] // Return today as fallback
+        }
       }
-      
-      // If no working day found in previous month, go to current date
-      return new Date().toISOString().split('T')[0]
+    }
+
+    // If it's a weekend, automatically find previous working day and update date
+    let actualDate = date
+    let wasWeekend = false
+    
+    if (isWeekend) {
+      actualDate = findPreviousWorkingDay(date)
+      wasWeekend = true
     }
 
     // Convert date to TCMB format (DD.MM.YYYY)
-    const [year, month, day] = date.split('-')
-    const tcmbDate = `${day}.${month}.${year}`
+    const [apiYear, apiMonth, apiDay] = actualDate.split('-')
+    const tcmbDate = `${apiDay}.${apiMonth}.${apiYear}`
     
     // Try to get data for requested date first
-    const url = `https://www.tcmb.gov.tr/kurlar/${year}${month}/${day}${month}${year}.xml`
+    const url = `https://www.tcmb.gov.tr/kurlar/${apiYear}${apiMonth}/${apiDay}${apiMonth}${apiYear}.xml`
     
     const response = await fetch(url, {
       headers: {
@@ -213,6 +234,9 @@ export async function GET(request: NextRequest) {
       success: true,
       data: result,
       date: tcmbDate,
+      originalDate: wasWeekend ? date : undefined,
+      fallbackDate: wasWeekend,
+      message: wasWeekend ? `Seçilen tarih (${date}) hafta sonu olduğu için önceki çalışma günü (${actualDate}) verileri kullanılıyor.` : undefined,
       timestamp: new Date().toISOString()
     })
     
