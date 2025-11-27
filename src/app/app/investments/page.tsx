@@ -544,8 +544,8 @@ export default function InvestmentsPage() {
   }
 
   // Open investment dialog
-  const openInvestmentDialog = (currency: CurrencyItem) => {
-    setSelectedCurrency(currency)
+  const openInvestmentDialog = (currency: CurrencyItem | CryptoItem) => {
+    setSelectedCurrency(currency as any)
     setInvestmentForm(prev => ({
       ...prev,
       currency: currency.symbol,
@@ -696,6 +696,14 @@ export default function InvestmentsPage() {
         maximumFractionDigits: 2
       }).format(price)
     }
+  }
+
+  // Format price based on currency type
+  const formatCurrencyPrice = (price: number, symbol: string) => {
+    // Check if it's a cryptocurrency
+    const cryptoSymbols = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOGE', 'DOT', 'MATIC', 'AVAX', 'USDT', 'USDC', 'BUSD', 'SHIB', 'LTC', 'LINK', 'UNI', 'ATOM', 'XLM', 'VET']
+    const prefix = cryptoSymbols.includes(symbol) ? '$' : '₺'
+    return `${prefix}${formatPrice(price)}`
   }
 
   const formatLargeNumber = (num: string) => {
@@ -1104,7 +1112,7 @@ export default function InvestmentsPage() {
                 <Label htmlFor="currentPrice">Güncel Fiyat</Label>
                 <Input
                   id="currentPrice"
-                  value={`₺${formatPrice(selectedCurrency?.price || 0)}`}
+                  value={formatCurrencyPrice(selectedCurrency?.price || 0, selectedCurrency?.symbol || '')}
                   readOnly
                   className="bg-muted"
                 />
