@@ -115,6 +115,46 @@ export default function InvestmentsPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [investmentToDelete, setInvestmentToDelete] = useState<string | null>(null)
+  
+  // Crypto states
+  const [cryptoData, setCryptoData] = useState<CryptoItem[]>([])
+  const [isLoadingCrypto, setIsLoadingCrypto] = useState(false)
+  const [cryptoLastUpdated, setCryptoLastUpdated] = useState<Date | null>(null)
+  
+  // Investment filter states
+  const [investmentFilter, setInvestmentFilter] = useState<'all' | 'currency' | 'crypto' | 'commodity'>('all')
+
+  // Helper function to determine investment category
+  const getInvestmentCategory = (currency: string): 'currency' | 'crypto' | 'commodity' => {
+    // Check if it's a cryptocurrency
+    const cryptoSymbols = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOGE', 'DOT', 'MATIC', 'AVAX', 'USDT', 'USDC', 'BUSD', 'SHIB', 'LTC', 'LINK', 'UNI', 'ATOM', 'XLM', 'VET']
+    if (cryptoSymbols.includes(currency)) {
+      return 'crypto'
+    }
+    
+    // Check if it's a commodity
+    const commoditySymbols = ['XAU', 'XAG', 'XPT', 'XPD', 'ALTIN', 'GÜMÜŞ', 'PLATİN', 'PALADYUM']
+    if (commoditySymbols.includes(currency)) {
+      return 'commodity'
+    }
+    
+    // Default to currency
+    return 'currency'
+  }
+
+  // Filter investments based on selected category and current tab
+  const getFilteredInvestments = () => {
+    let filtered = investments
+    
+    // Filter by category if not "all"
+    if (investmentFilter !== 'all') {
+      filtered = investments.filter(investment => 
+        getInvestmentCategory(investment.currency) === investmentFilter
+      )
+    }
+    
+    return filtered
+  }
 
   // Check user authentication
   useEffect(() => {
@@ -363,6 +403,36 @@ export default function InvestmentsPage() {
     }
   }
 
+  // CoinMarketCap'den kripto verilerini çek
+  const fetchCryptoData = async () => {
+    setIsLoadingCrypto(true)
+    try {
+      const response = await fetch('/api/crypto')
+      const result = await response.json()
+      
+      if (result.success) {
+        const data = result.data.map((item: any) => ({
+          symbol: item.symbol,
+          name: item.name,
+          price: item.price,
+          change: item.change,
+          changePercent: item.changePercent,
+          volume: item.volume,
+          marketCap: item.marketCap,
+          icon: <Bitcoin className={`w-5 h-5 ${item.icon || 'text-gray-500'}`} />
+        }))
+        setCryptoData(data)
+        setCryptoLastUpdated(new Date())
+      } else {
+        console.error('Failed to fetch crypto data:', result.error)
+      }
+    } catch (error) {
+      console.error('Kripto verileri çekilemedi:', error)
+    } finally {
+      setIsLoadingCrypto(false)
+    }
+  }
+
   // Load historical price for investment
   const fetchHistoricalPrice = async (date: string, currencyCode: string) => {
     setIsLoadingHistorical(true)
@@ -514,11 +584,16 @@ export default function InvestmentsPage() {
 
   useEffect(() => {
     fetchCurrencyData()
+    fetchCryptoData()
     
     // Her 5 dakikada bir verileri yenile
-    const interval = setInterval(fetchCurrencyData, 5 * 60 * 1000)
+    const currencyInterval = setInterval(fetchCurrencyData, 5 * 60 * 1000)
+    const cryptoInterval = setInterval(fetchCryptoData, 5 * 60 * 1000)
     
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(currencyInterval)
+      clearInterval(cryptoInterval)
+    }
   }, [])
 
   // Update displayed currencies when visible count changes
@@ -530,48 +605,18 @@ export default function InvestmentsPage() {
     }
   }, [currencyData, visibleCount])
 
-  const cryptoData: CryptoItem[] = [
-    {
-      symbol: 'BTC',
-      name: 'Bitcoin',
-      price: 67234.50,
-      change: 1250.30,
-      changePercent: 1.89,
-      volume: '28.5B',
-      marketCap: '1.31T',
-      icon: <Bitcoin className="w-5 h-5 text-orange-500" />
-    },
-    {
-      symbol: 'ETH',
-      name: 'Ethereum',
-      price: 3456.78,
-      change: -45.20,
-      changePercent: -1.29,
-      volume: '15.2B',
-      marketCap: '415.2B',
-      icon: <Bitcoin className="w-5 h-5 text-blue-500" />
-    },
-    {
-      symbol: 'BNB',
-      name: 'Binance Coin',
-      price: 567.89,
-      change: 12.45,
-      changePercent: 2.24,
-      volume: '1.8B',
-      marketCap: '87.3B',
-      icon: <Bitcoin className="w-5 h-5 text-yellow-500" />
-    },
-    {
-      symbol: 'SOL',
-      name: 'Solana',
-      price: 145.67,
-      change: 8.92,
-      changePercent: 6.52,
-      volume: '2.3B',
-      marketCap: '65.8B',
-      icon: <Bitcoin className="w-5 h-5 text-purple-500" />
+  // Update investment filter when tab changes
+  useEffect(() => {
+    if (selectedTab === 'currency') {
+      setInvestmentFilter('currency')
+    } else if (selectedTab === 'crypto') {
+      setInvestmentFilter('crypto')
+    } else if (selectedTab === 'commodity') {
+      setInvestmentFilter('commodity')
+    } else {
+      setInvestmentFilter('all')
     }
-  ]
+  }, [selectedTab])
 
   const commodityData: CommodityItem[] = [
     {
@@ -758,57 +803,74 @@ export default function InvestmentsPage() {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div className="min-w-0 flex-1">
           <h3 className="text-lg font-semibold truncate">Kripto Paralar</h3>
+          {cryptoLastUpdated && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Son güncelleme: {cryptoLastUpdated.toLocaleTimeString('tr-TR')}
+            </p>
+          )}
         </div>
-        <Button variant="outline" size="sm" className="shrink-0">
-          <RefreshCw className="w-4 h-4 mr-2" />
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="shrink-0"
+          onClick={fetchCryptoData}
+          disabled={isLoadingCrypto}
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${isLoadingCrypto ? 'animate-spin' : ''}`} />
           <span className="hidden sm:inline">Yenile</span>
           <span className="sm:hidden">↻</span>
         </Button>
       </div>
-      <div className="grid gap-4">
-        {data.map((item) => (
-          <Card key={item.symbol} className="p-4 hover:shadow-md transition-shadow duration-200">
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="p-2 bg-primary/10 rounded-lg shrink-0">
-                  {item.icon}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-base sm:text-lg truncate" title={item.symbol}>{item.symbol}</div>
-                  <div className="text-sm text-muted-foreground truncate" title={item.name}>{item.name}</div>
-                  <div className="text-xs text-muted-foreground mt-2 space-y-1">
-                    <div className="truncate" title={`Hacim: ${formatLargeNumber(item.volume)}`}>
-                      <span className="font-medium">Hacim:</span> {formatLargeNumber(item.volume)}
-                    </div>
-                    <div className="truncate" title={`Piyasa Değeri: ${formatLargeNumber(item.marketCap)}`}>
-                      <span className="font-medium">Piyasa:</span> {formatLargeNumber(item.marketCap)}
+      {isLoadingCrypto ? (
+        <div className="flex justify-center py-8">
+          <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {data.map((item) => (
+            <Card key={item.symbol} className="p-4 hover:shadow-md transition-shadow duration-200">
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                    {item.icon}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-base sm:text-lg truncate" title={item.symbol}>{item.symbol}</div>
+                    <div className="text-sm text-muted-foreground truncate" title={item.name}>{item.name}</div>
+                    <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                      <div className="truncate" title={`Hacim: ${item.volume}`}>
+                        <span className="font-medium">Hacim:</span> ${item.volume}
+                      </div>
+                      <div className="truncate" title={`Piyasa Değeri: ${item.marketCap}`}>
+                        <span className="font-medium">Piyasa:</span> ${item.marketCap}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="text-right">
-                <div className="font-bold text-lg sm:text-xl text-foreground whitespace-nowrap" title={`Fiyat: $${formatPrice(item.price)}`}>
-                  ${formatPrice(item.price)}
-                </div>
-                <div className={`flex items-center justify-end space-x-1 mt-1 ${
-                  item.change >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                }`}>
-                  {item.change >= 0 ? (
-                    <ArrowUpRight className="w-4 h-4 shrink-0" />
-                  ) : (
-                    <ArrowDownRight className="w-4 h-4 shrink-0" />
-                  )}
-                  <span className="text-sm font-medium"
-                    title={`Değişim: ${item.change >= 0 ? '+' : ''}${formatPrice(item.change)} (${item.changePercent >= 0 ? '+' : ''}${item.changePercent}%)`}
-                  >
-                    {item.change >= 0 ? '+' : ''}{formatPrice(item.change)} ({item.changePercent >= 0 ? '+' : ''}{item.changePercent}%)
-                  </span>
+                <div className="text-right">
+                  <div className="font-bold text-lg sm:text-xl text-foreground whitespace-nowrap" title={`Fiyat: $${formatPrice(item.price)}`}>
+                    ${formatPrice(item.price)}
+                  </div>
+                  <div className={`flex items-center justify-end space-x-1 mt-1 ${
+                    item.change >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                  }`}>
+                    {item.change >= 0 ? (
+                      <ArrowUpRight className="w-4 h-4 shrink-0" />
+                    ) : (
+                      <ArrowDownRight className="w-4 h-4 shrink-0" />
+                    )}
+                    <span className="text-sm font-medium"
+                      title={`Değişim: ${item.change >= 0 ? '+' : ''}${formatPrice(item.change)} (${item.changePercent >= 0 ? '+' : ''}${item.changePercent}%)`}
+                    >
+                      {item.change >= 0 ? '+' : ''}{formatPrice(item.change)} ({item.changePercent >= 0 ? '+' : ''}{item.changePercent}%)
+                    </span>
                 </div>
               </div>
             </div>
           </Card>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   )
 
@@ -1127,30 +1189,51 @@ export default function InvestmentsPage() {
         <div className="container mx-auto px-4 py-6">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Wallet className="w-5 h-5" />
                     Yatırımlarınız
                   </CardTitle>
                   <CardDescription>
-                    Yaptığınız döviz yatırımlarınızın takibi
+                    {investmentFilter === 'all' 
+                      ? 'Tüm yatırımlarınızın takibi'
+                      : investmentFilter === 'currency'
+                      ? 'Döviz yatırımlarınızın takibi'
+                      : investmentFilter === 'crypto'
+                      ? 'Kripto para yatırımlarınızın takibi'
+                      : 'Maden yatırımlarınızın takibi'
+                    }
                   </CardDescription>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowStatisticsDialog(true)}
-                  className="flex items-center gap-2"
-                >
-                  <PieChartIcon className="w-4 h-4" />
-                  İstatistikler
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Select value={investmentFilter} onValueChange={(value: 'all' | 'currency' | 'crypto' | 'commodity') => setInvestmentFilter(value)}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tümü</SelectItem>
+                      <SelectItem value="currency">Döviz</SelectItem>
+                      <SelectItem value="crypto">Kripto</SelectItem>
+                      <SelectItem value="commodity">Maden</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowStatisticsDialog(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <PieChartIcon className="w-4 h-4" />
+                    <span className="hidden sm:inline">İstatistikler</span>
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4 max-h-96 overflow-y-auto">
-                {investments.map((investment) => {
+                {getFilteredInvestments().length > 0 ? (
+                  getFilteredInvestments().map((investment) => {
                   const profitDetails = formatProfitDetails(
                     calculateInvestmentProfit(investment, investment.current_value / investment.amount)
                   )
@@ -1212,7 +1295,30 @@ export default function InvestmentsPage() {
                       </div>
                     </div>
                   )
-                })}
+                }) ) : (
+                  <div className="text-center py-8">
+                    <div className="text-lg font-semibold mb-2">
+                      {investmentFilter === 'currency' 
+                        ? 'Döviz yatırımınız bulunmuyor'
+                        : investmentFilter === 'crypto'
+                        ? 'Kripto para yatırımınız bulunmuyor'
+                        : investmentFilter === 'commodity'
+                        ? 'Maden yatırımınız bulunmuyor'
+                        : 'Yatırımınız bulunmuyor'
+                      }
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {investmentFilter === 'currency' 
+                        ? 'Döviz tablosundan yatırım yapmaya başlayabilirsiniz'
+                        : investmentFilter === 'crypto'
+                        ? 'Kripto para tablosundan yatırım yapmaya başlayabilirsiniz'
+                        : investmentFilter === 'commodity'
+                        ? 'Madenler tablosundan yatırım yapmaya başlayabilirsiniz'
+                        : 'Yukarıdaki tablolardan yatırım yapmaya başlayabilirsiniz'
+                      }
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
