@@ -23,7 +23,7 @@ async function getBlogPosts() {
           }
         },
         tags: {
-          select: {
+          include: {
             tag: {
               select: {
                 id: true,

@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
           }
         },
         tags: {
-          select: {
+          include: {
             tag: {
               select: {
                 id: true,
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
           }
         },
         tags: {
-          select: {
+          include: {
             tag: {
               select: {
                 id: true,
