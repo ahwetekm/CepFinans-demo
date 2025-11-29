@@ -1,5 +1,10 @@
 import BlogPage from '@/components/blog/BlogPage'
 import { db } from '@/lib/prisma'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Settings } from 'lucide-react'
 
 async function getBlogPosts() {
   try {
@@ -92,5 +97,19 @@ export default async function Blog() {
     getCategories()
   ])
 
-  return <BlogPage initialPosts={posts} categories={categories} />
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Admin Button */}
+      <div className="fixed top-6 right-6 z-50">
+        <Link href="/admin/blog">
+          <Button variant="outline" size="sm">
+            <Settings className="w-4 h-4 mr-2" />
+            Admin
+          </Button>
+        </Link>
+      </div>
+
+      <BlogPage initialPosts={posts} categories={categories} />
+    </div>
+  )
 }
