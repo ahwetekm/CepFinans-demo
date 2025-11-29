@@ -42,7 +42,6 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     checkAuth()
-    fetchStats()
   }, [])
 
   const checkAuth = async () => {
@@ -54,6 +53,7 @@ export default function AdminDashboard() {
       }
       const data = await response.json()
       setAdmin(data.admin)
+      fetchStats() // Sadece auth başarılı olursa stats'ları çek
     } catch (error) {
       router.push('/admin')
     }

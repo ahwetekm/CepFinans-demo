@@ -20,20 +20,9 @@ export default function AdminLoginPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Eğer zaten giriş yapmışsa admin paneline yönlendir
-    checkAuth()
+    // Kullanıcıyı login sayfasında tut, auth kontrolü yapma
+    // Auth kontrolü sadece dashboard'da yapılsın
   }, [])
-
-  const checkAuth = async () => {
-    try {
-      const response = await fetch('/api/admin/auth')
-      if (response.ok) {
-        router.push('/admin/dashboard')
-      }
-    } catch (error) {
-      // Token yok veya geçersiz, login sayfasında kal
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,17 +30,20 @@ export default function AdminLoginPage() {
     setError('')
 
     try {
-      const response = await fetch('/api/admin/login', {
+      const response = await fetch('/api/admin/auth', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          email: formData.username,
+          password: formData.password
+        }),
       })
 
       const data = await response.json()
 
-      if (response.ok) {
+      if (data.success) {
         // Başarılı giriş, admin paneline yönlendir
         router.push('/admin/dashboard')
       } else {
@@ -95,7 +87,7 @@ export default function AdminLoginPage() {
                 type="text"
                 value={formData.username}
                 onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-                placeholder="admin@cepfinans.com"
+                placeholder="admin@butcapp.com"
                 required
                 disabled={loading}
               />
